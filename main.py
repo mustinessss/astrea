@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import Base, engine
 from app.core.config import settings
 from app.models import *
+from app.api.routes import human_router, event_router, score_router, team_router
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -23,6 +24,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(human_router)
+app.include_router(event_router)
+app.include_router(score_router)
+app.include_router(team_router)
 
 
 @app.get("/")
