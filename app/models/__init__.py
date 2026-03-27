@@ -1,0 +1,29 @@
+from app.models.models import (
+    Chronometric,
+    Event,
+    Human,
+    HumanEvent,
+    HumanPerformance,
+    HumanTeam,
+    Performance,
+    ScoresArtFaf,
+    ScoresArtNaf,
+    ScoresTechFaf,
+    ScoresTechNaf,
+    Team,
+)
+
+__all__ = [
+    "Chronometric",
+    "Event",
+    "Human",
+    "HumanEvent",
+    "HumanPerformance",
+    "HumanTeam",
+    "Performance",
+    "ScoresArtFaf",
+    "ScoresArtNaf",
+    "ScoresTechFaf",
+    "ScoresTechNaf",
+    "Team",
+]
