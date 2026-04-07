@@ -1,7 +1,7 @@
 from typing import Optional
 import datetime
 
-from sqlalchemy import CheckConstraint, Date, Identity, Integer, Numeric, PrimaryKeyConstraint, String, Text, Time, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, DateTime, Identity, Integer, Numeric, PrimaryKeyConstraint, String, Text, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
@@ -94,6 +94,7 @@ class Performance(Base):
     id_performance: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     performance_name: Mapped[str] = mapped_column(String, nullable=False)
     discipline: Mapped[str] = mapped_column(String, nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class ScoresArtFaf(Base):
@@ -241,3 +242,28 @@ class Team(Base):
     id_team: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False)
     team_name: Mapped[str] = mapped_column(String, primary_key=True)
     team_city: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class Judge(Base):
+    """
+    Учетные данные судей
+    Хранит email, пароль и роль судьи для аутентификации
+    """
+    __tablename__ = 'judge'
+    __table_args__ = (
+        PrimaryKeyConstraint('id_judge', name='judge_pk'),
+        UniqueConstraint('email', name='judge_email_unique'),
+        UniqueConstraint('access_code', name='judge_access_code_unique'),
+        CheckConstraint("role::text = ANY (ARRAY['judge'::character varying, 'main_judge'::character varying, 'technical'::character varying, 'artistry'::character varying, 'timekeeper'::character varying, 'volunteer'::character varying, 'medic'::character varying]::text[])", name='judge_role_check'),
+    )
+
+    id_judge: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    id_human: Mapped[int] = mapped_column(Integer, nullable=False)  # Связь с Human
+    id_event: Mapped[Optional[int]] = mapped_column(Integer)  # На каком событии работает
+    email: Mapped[str] = mapped_column(String(100), nullable=False)  # Email для логина
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)  # Хеш пароля
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # судья, главный судья, техник, артист и т.д.
+    access_code: Mapped[Optional[str]] = mapped_column(String(50))  # Уникальный код доступа
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)  # Активен ли аккаунт
+    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.utcnow)
+    last_login: Mapped[Optional[datetime.datetime]] = mapped_column()

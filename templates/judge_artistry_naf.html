@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Форма оценки - Художественный судья НАФ - Астрея</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .judge-info { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4caf50; }
+        .performance-card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .performance-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .performance-name { font-size: 18px; font-weight: bold; color: #333; }
+        .team-name { color: #666; font-style: italic; }
+        .discipline-info { color: #666; font-size: 14px; margin-top: 5px; }
+        .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .criterion { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; }
+        .criterion label { display: block; margin-bottom: 8px; font-weight: bold; color: #495057; }
+        .criterion input { width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 16px; }
+        .criterion input:focus { border-color: #4caf50; outline: none; }
+        .submit-btn { background-color: #4caf50; color: white; padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 20px; }
+        .submit-btn:hover { background-color: #45a049; }
+        .back-btn { background-color: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        .back-btn:hover { background-color: #5a6268; }
+        .total-score { background: #e9ecef; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; font-size: 18px; font-weight: bold; color: #495057; }
+        .system-notice { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #856404; }
+    </style>
+</head>
+<body>
+    <a href="/judge/{{ role_type }}/{{ system }}" class="back-btn">← К списку номеров</a>
+
+    <div class="header">
+        <h1>Художественная оценка НАФ</h1>
+        <p>Судья: {{ judge.first_name }} {{ judge.last_name }}</p>
+    </div>
+
+    <div class="judge-info">
+        <strong>Специализация:</strong> {{ judge.role|replace('_', ' ')|title }}<br>
+        <strong>Email:</strong> {{ judge.email }}
+    </div>
+
+    <div class="system-notice">
+        <strong>⚠️ ВНИМАНИЕ:</strong> Это заглушка для системы НАФ. Критерии и шкалы оценки будут скорректированы согласно правилам Национальной Ассоциации Фехтования.
+    </div>
+
+    <div class="performance-card">
+        <div class="performance-header">
+            <div>
+                <div class="performance-name">{{ performance.name }}</div>
+                <div class="team-name">{{ performance.team }}</div>
+                <div class="discipline-info">Дисциплина: {{ performance.discipline }}</div>
+            </div>
+        </div>
+
+        <form method="post" action="/judge/{{ role_type }}/{{ system }}/score">
+            <input type="hidden" name="performance_id" value="{{ performance.id }}">
+            <input type="hidden" name="judge_id" value="{{ judge.id }}">
+
+            <div class="criteria-grid">
+                <!-- Художественные критерии НАФ (0-1, шаг 0.05) - ЗАГЛУШКА -->
+                <div class="criterion">
+                    <label for="expression_{{ performance.id }}">Выразительность (0-1, шаг 0.05):</label>
+                    <input type="number" id="expression_{{ performance.id }}" name="expression" min="0" max="1" step="0.05" required>
+                </div>
+                <div class="criterion">
+                    <label for="creativity_{{ performance.id }}">Креативность (0-1, шаг 0.05):</label>
+                    <input type="number" id="creativity_{{ performance.id }}" name="creativity" min="0" max="1" step="0.05" required>
+                </div>
+                <div class="criterion">
+                    <label for="harmony_{{ performance.id }}">Гармония (0-1, шаг 0.05):</label>
+                    <input type="number" id="harmony_{{ performance.id }}" name="harmony" min="0" max="1" step="0.05" required>
+                </div>
+                <div class="criterion">
+                    <label for="emotion_{{ performance.id }}">Эмоциональность (0-1, шаг 0.05):</label>
+                    <input type="number" id="emotion_{{ performance.id }}" name="emotion" min="0" max="1" step="0.05" required>
+                </div>
+                <div class="criterion">
+                    <label for="originality_{{ performance.id }}">Оригинальность (0-1, шаг 0.05):</label>
+                    <input type="number" id="originality_{{ performance.id }}" name="originality" min="0" max="1" step="0.05" required>
+                </div>
+                <div class="criterion">
+                    <label for="interpretation_{{ performance.id }}">Интерпретация (0-1, шаг 0.05):</label>
+                    <input type="number" id="interpretation_{{ performance.id }}" name="interpretation" min="0" max="1" step="0.05" required>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Сохранить оценку</button>
+        </form>
+    </div>
+
+    <script>
+        // Автоматический расчёт итоговой оценки
+        document.addEventListener('input', function(e) {
+            if (e.target.type === 'number') {
+                const form = e.target.closest('form');
+                const inputs = form.querySelectorAll('input[type="number"]:not([name="performance_id"]):not([name="judge_id"])');
+                let total = 0;
+                let count = 0;
+
+                inputs.forEach(input => {
+                    if (input.value) {
+                        total += parseFloat(input.value);
+                        count++;
+                    }
+                });
+
+                // Найти или создать элемент для итоговой оценки
+                let totalDiv = form.querySelector('.total-score');
+                if (!totalDiv) {
+                    totalDiv = document.createElement('div');
+                    totalDiv.className = 'total-score';
+                    form.appendChild(totalDiv);
+                }
+
+                if (count > 0) {
+                    const average = (total / count).toFixed(2);
+                    totalDiv.textContent = `Итоговая оценка: ${average}`;
+                } else {
+                    totalDiv.textContent = 'Заполните критерии для расчёта оценки';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

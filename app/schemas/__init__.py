@@ -8,6 +8,7 @@ from app.schemas.score import (
     ScoresArtNafCreate, ScoresArtNafResponse,
     ScoresTechNafCreate, ScoresTechNafResponse
 )
+from app.schemas.auth import Token, Judge, LoginRequest, JudgeLoginResponse
 
 __all__ = [
     "HumanCreate", "HumanUpdate", "HumanResponse",
@@ -18,4 +19,5 @@ __all__ = [
     "ScoresTechFafCreate", "ScoresTechFafResponse",
     "ScoresArtNafCreate", "ScoresArtNafResponse",
     "ScoresTechNafCreate", "ScoresTechNafResponse",
+    "Token", "Judge", "LoginRequest", "JudgeLoginResponse",
 ]

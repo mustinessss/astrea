@@ -70,7 +70,7 @@ def delete_event(event_id: int, db: Session = Depends(get_db)):
 def get_performances(event_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all performances for an event"""
     performances = db.query(Performance).filter(
-        Performance.id_performance == event_id
+        Performance.id_event == event_id
     ).offset(skip).limit(limit).all()
     return performances
 

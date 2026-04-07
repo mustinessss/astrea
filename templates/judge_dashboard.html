@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд судьи - Астрея</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .judge-info { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea; }
+        .disciplines-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .discipline-card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .discipline-header { background: #667eea; color: white; padding: 15px; font-size: 18px; font-weight: bold; }
+        .performance-list { padding: 0; margin: 0; }
+        .performance-item { border-bottom: 1px solid #eee; }
+        .performance-item:last-child { border-bottom: none; }
+        .performance-button { width: 100%; padding: 15px; background: none; border: none; text-align: left; cursor: pointer; transition: background-color 0.3s; }
+        .performance-button:hover { background-color: #f8f9fa; }
+        .performance-name { font-weight: bold; color: #333; display: block; margin-bottom: 5px; }
+        .performance-team { color: #666; font-style: italic; font-size: 14px; }
+        .back-btn { background-color: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        .back-btn:hover { background-color: #5a6268; }
+        .system-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; }
+        .system-faf { background: #9c27b0; color: white; }
+        .system-naf { background: #4caf50; color: white; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">← Назад</a>
+
+    <div class="header">
+        <h1>Дашборд судьи</h1>
+        <p>{{ judge.first_name }} {{ judge.last_name }} - {{ role_type|title }} ({{ system|upper }})</p>
+    </div>
+
+    <div class="judge-info">
+        <strong>Специализация:</strong> {{ judge.role|replace('_', ' ')|title }}<br>
+        <strong>Email:</strong> {{ judge.email }}<br>
+        <strong>Система:</strong>
+        <span class="system-badge system-{{ system }}">
+            {% if system == 'faf' %}Федерация Артистического Фехтования{% else %}Национальная Ассоциация Фехтования{% endif %}
+        </span>
+    </div>
+
+    <div class="disciplines-container">
+        {% for discipline_name, performances in disciplines.items() %}
+        <div class="discipline-card">
+            <div class="discipline-header">
+                {{ discipline_name }}
+            </div>
+            <ul class="performance-list">
+                {% for performance in performances %}
+                <li class="performance-item">
+                    <button class="performance-button" onclick="window.location.href='/judge/{{ role_type }}/{{ system }}/performance/{{ performance.id }}'">
+                        <span class="performance-name">{{ performance.name }}</span>
+                        <span class="performance-team">{{ performance.team }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Можно добавить JavaScript для дополнительных функций, например, отметки оцененных номеров
+    </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд результатов - Астрея</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 32px; }
+        .container { display: flex; min-height: calc(100vh - 80px); }
+        .panel { flex: 1; padding: 20px; }
+        .panel-naf { background-color: #e3f2fd; border-right: 2px solid #2196f3; }
+        .panel-faf { background-color: #f3e5f5; }
+        .panel h2 { color: #333; margin-bottom: 20px; text-align: center; font-size: 24px; }
+        .results-list { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; }
+        .result-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .result-item:last-child { border-bottom: none; }
+        .performance-name { font-weight: bold; color: #333; }
+        .team-name { color: #666; font-style: italic; }
+        .score { font-size: 18px; font-weight: bold; color: #2196f3; }
+        .score.naf { color: #4caf50; }
+        .score.faf { color: #9c27b0; }
+        .sort-buttons { text-align: center; margin-bottom: 20px; }
+        button { background-color: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin: 0 5px; }
+        button:hover { background-color: #5a6fd8; }
+        .no-results { text-align: center; color: #666; padding: 40px; font-style: italic; }
+        .back-button { position: fixed; top: 20px; left: 20px; background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        .back-button:hover { background: #c82333; }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.location.href='/'">← Назад</button>
+
+    <div class="header">
+        <h1>Дашборд результатов</h1>
+    </div>
+
+    <div class="container">
+        <div class="panel panel-naf">
+            <h2>Система НАФ</h2>
+            <div class="sort-buttons">
+                <button onclick="sortResults('naf', 'name')">По названию</button>
+                <button onclick="sortResults('naf', 'score')">По баллу</button>
+                <button onclick="sortResults('naf', 'team')">По коллективу</button>
+            </div>
+            <div class="results-list" id="naf-results">
+                {% for result in naf_results %}
+                <div class="result-item" data-name="{{ result.name }}" data-score="{{ result.score }}" data-team="{{ result.team }}">
+                    <div>
+                        <div class="performance-name">{{ result.name }}</div>
+                        <div class="team-name">{{ result.team }}</div>
+                    </div>
+                    <div class="score naf">{{ "%.2f"|format(result.score) }}</div>
+                </div>
+                {% endfor %}
+                {% if not naf_results %}
+                <div class="no-results">Результаты НАФ пока не доступны</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel panel-faf">
+            <h2>Система ФАФ</h2>
+            <div class="sort-buttons">
+                <button onclick="sortResults('faf', 'name')">По названию</button>
+                <button onclick="sortResults('faf', 'score')">По баллу</button>
+                <button onclick="sortResults('faf', 'team')">По коллективу</button>
+            </div>
+            <div class="results-list" id="faf-results">
+                {% for result in faf_results %}
+                <div class="result-item" data-name="{{ result.name }}" data-score="{{ result.score }}" data-team="{{ result.team }}">
+                    <div>
+                        <div class="performance-name">{{ result.name }}</div>
+                        <div class="team-name">{{ result.team }}</div>
+                    </div>
+                    <div class="score faf">{{ result.score }}</div>
+                </div>
+                {% endfor %}
+                {% if not faf_results %}
+                <div class="no-results">Результаты ФАФ пока не доступны</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function sortResults(system, criteria) {
+            const container = document.getElementById(system + '-results');
+            const items = Array.from(container.querySelectorAll('.result-item'));
+
+            items.sort((a, b) => {
+                let aVal, bVal;
+
+                switch(criteria) {
+                    case 'name':
+                        aVal = a.dataset.name.toLowerCase();
+                        bVal = b.dataset.name.toLowerCase();
+                        return aVal.localeCompare(bVal);
+                    case 'score':
+                        aVal = parseFloat(a.dataset.score);
+                        bVal = parseFloat(b.dataset.score);
+                        return bVal - aVal; // descending
+                    case 'team':
+                        aVal = a.dataset.team.toLowerCase();
+                        bVal = b.dataset.team.toLowerCase();
+                        return aVal.localeCompare(bVal);
+                }
+            });
+
+            // Reorder DOM elements
+            items.forEach(item => container.appendChild(item));
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>

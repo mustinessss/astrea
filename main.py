@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from app.db.database import Base, engine
 from app.core.config import settings
 from app.models import *
-from app.api.routes import human_router, event_router, score_router, team_router
+from app.api.routes import auth_router, human_router, event_router, score_router, team_router, admin_router
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -16,6 +18,9 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Mount static files
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +31,12 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth_router)
 app.include_router(human_router)
+app.include_router(event_router)
+app.include_router(score_router)
+app.include_router(team_router)
+app.include_router(admin_router)
 app.include_router(event_router)
 app.include_router(score_router)
 app.include_router(team_router)
