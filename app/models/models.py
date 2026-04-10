@@ -1,7 +1,7 @@
 from typing import Optional
 import datetime
 
-from sqlalchemy import CheckConstraint, Date, DateTime, Identity, Integer, Numeric, PrimaryKeyConstraint, String, Text, Time, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Identity, Integer, Numeric, PrimaryKeyConstraint, String, Text, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
@@ -16,8 +16,8 @@ class Chronometric(Base):
     id_chronometric: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     total_time: Mapped[datetime.time] = mapped_column(Time, nullable=False)
     time_fencing: Mapped[datetime.time] = mapped_column(Time, nullable=False)
-    id_performance: Mapped[int] = mapped_column(Integer, nullable=False)
-    id_human: Mapped[str] = mapped_column(String, nullable=False)
+    id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id'), nullable=False)
 
 
 class Event(Base):
@@ -56,8 +56,8 @@ class HumanEvent(Base):
     )
 
     id_human_event: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)
-    id_event: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'), nullable=False)
     role_event: Mapped[str] = mapped_column(String, nullable=False)
     access_code: Mapped[Optional[str]] = mapped_column(String(50))
     judge_type: Mapped[Optional[str]] = mapped_column(String(20))
@@ -72,7 +72,7 @@ class HumanPerformance(Base):
 
     id_human_performance: Mapped[int] = mapped_column(Integer, primary_key=True)
     role: Mapped[str] = mapped_column(String, nullable=False)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
 
 
 class HumanTeam(Base):
@@ -89,12 +89,13 @@ class Performance(Base):
     __tablename__ = 'performance'
     __table_args__ = (
         PrimaryKeyConstraint('id_performance', name='performance_pk'),
+        CheckConstraint("discipline IN ('Соло', 'Дуэль', 'Группа', 'Ансамбль')", name='performance_discipline_check'),
     )
 
     id_performance: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     performance_name: Mapped[str] = mapped_column(String, nullable=False)
     discipline: Mapped[str] = mapped_column(String, nullable=False)
-    id_event: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'), nullable=False)
 
 
 class ScoresArtFaf(Base):
@@ -105,11 +106,24 @@ class ScoresArtFaf(Base):
     __tablename__ = 'scores_art_faf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_art_faf', name='scores_art_faf_pk'),
+        CheckConstraint('criterion_1 IS NULL OR (criterion_1 >= 0 AND criterion_1 <= 10)', name='scores_art_faf_c1_check'),
+        CheckConstraint('criterion_2 IS NULL OR (criterion_2 >= 0 AND criterion_2 <= 10)', name='scores_art_faf_c2_check'),
+        CheckConstraint('criterion_3 IS NULL OR (criterion_3 >= 0 AND criterion_3 <= 10)', name='scores_art_faf_c3_check'),
+        CheckConstraint('criterion_4 IS NULL OR (criterion_4 >= 0 AND criterion_4 <= 10)', name='scores_art_faf_c4_check'),
+        CheckConstraint('criterion_5 IS NULL OR (criterion_5 >= 0 AND criterion_5 <= 10)', name='scores_art_faf_c5_check'),
+        CheckConstraint('criterion_6 IS NULL OR (criterion_6 >= 0 AND criterion_6 <= 10)', name='scores_art_faf_c6_check'),
+        CheckConstraint('criterion_7 IS NULL OR (criterion_7 >= 0 AND criterion_7 <= 10)', name='scores_art_faf_c7_check'),
+        CheckConstraint('criterion_8 IS NULL OR (criterion_8 >= 0 AND criterion_8 <= 10)', name='scores_art_faf_c8_check'),
+        CheckConstraint('criterion_9 IS NULL OR (criterion_9 >= 0 AND criterion_9 <= 10)', name='scores_art_faf_c9_check'),
+        CheckConstraint('criterion_10 IS NULL OR (criterion_10 >= 0 AND criterion_10 <= 10)', name='scores_art_faf_c10_check'),
+        CheckConstraint('criterion_11 IS NULL OR (criterion_11 >= 0 AND criterion_11 <= 10)', name='scores_art_faf_c11_check'),
+        CheckConstraint('criterion_12 IS NULL OR (criterion_12 >= 0 AND criterion_12 <= 10)', name='scores_art_faf_c12_check'),
+        CheckConstraint('criterion_13 IS NULL OR (criterion_13 >= 0 AND criterion_13 <= 10)', name='scores_art_faf_c13_check'),
     )
 
     id_scores_art_faf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)
-    id_performance: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
     
     # 13 артистических критериев ФАФ (0-10, целые числа)
     criterion_1: Mapped[Optional[int]] = mapped_column(Integer)  # 1. Музыкальность и ритм
@@ -135,11 +149,24 @@ class ScoresArtNaf(Base):
     __tablename__ = 'scores_art_naf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_art_naf', name='scores_art_naf_pk'),
+        CheckConstraint('criterion_1 IS NULL OR (criterion_1 >= 0 AND criterion_1 <= 1)', name='scores_art_naf_c1_check'),
+        CheckConstraint('criterion_2 IS NULL OR (criterion_2 >= 0 AND criterion_2 <= 1)', name='scores_art_naf_c2_check'),
+        CheckConstraint('criterion_3 IS NULL OR (criterion_3 >= 0 AND criterion_3 <= 1)', name='scores_art_naf_c3_check'),
+        CheckConstraint('criterion_4 IS NULL OR (criterion_4 >= 0 AND criterion_4 <= 1)', name='scores_art_naf_c4_check'),
+        CheckConstraint('criterion_5 IS NULL OR (criterion_5 >= 0 AND criterion_5 <= 1)', name='scores_art_naf_c5_check'),
+        CheckConstraint('criterion_6 IS NULL OR (criterion_6 >= 0 AND criterion_6 <= 1)', name='scores_art_naf_c6_check'),
+        CheckConstraint('criterion_7 IS NULL OR (criterion_7 >= 0 AND criterion_7 <= 1)', name='scores_art_naf_c7_check'),
+        CheckConstraint('criterion_8 IS NULL OR (criterion_8 >= 0 AND criterion_8 <= 1)', name='scores_art_naf_c8_check'),
+        CheckConstraint('criterion_9 IS NULL OR (criterion_9 >= 0 AND criterion_9 <= 0.5)', name='scores_art_naf_c9_check'),
+        CheckConstraint('criterion_10 IS NULL OR (criterion_10 >= 0 AND criterion_10 <= 1)', name='scores_art_naf_c10_check'),
+        CheckConstraint('criterion_11 IS NULL OR (criterion_11 >= 0 AND criterion_11 <= 1)', name='scores_art_naf_c11_check'),
+        CheckConstraint('criterion_12 IS NULL OR (criterion_12 >= 0 AND criterion_12 <= 0.5)', name='scores_art_naf_c12_check'),
+        CheckConstraint('criterion_13 IS NULL OR (criterion_13 >= 0 AND criterion_13 <= 1)', name='scores_art_naf_c13_check'),
     )
 
     id_scores_art_naf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)
-    id_performance: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
     
     # 13 артистических критериев НАФ (0-1, шаг 0.05)
     criterion_1: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1. Музыкальность и ритм
@@ -166,11 +193,27 @@ class ScoresTechFaf(Base):
     __tablename__ = 'scores_tech_faf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_tech_faf', name='scores_tech_faf_pk'),
+        CheckConstraint('criterion_1_1 IS NULL OR (criterion_1_1 >= 0 AND criterion_1_1 <= 10)', name='scores_tech_faf_c1_1_check'),
+        CheckConstraint('criterion_1_2 IS NULL OR (criterion_1_2 >= 0 AND criterion_1_2 <= 10)', name='scores_tech_faf_c1_2_check'),
+        CheckConstraint('criterion_1_3 IS NULL OR (criterion_1_3 >= 0 AND criterion_1_3 <= 10)', name='scores_tech_faf_c1_3_check'),
+        CheckConstraint('criterion_1_4 IS NULL OR (criterion_1_4 >= 0 AND criterion_1_4 <= 10)', name='scores_tech_faf_c1_4_check'),
+        CheckConstraint('criterion_1_5 IS NULL OR (criterion_1_5 >= 0 AND criterion_1_5 <= 10)', name='scores_tech_faf_c1_5_check'),
+        CheckConstraint('criterion_2_1 IS NULL OR (criterion_2_1 >= 0 AND criterion_2_1 <= 10)', name='scores_tech_faf_c2_1_check'),
+        CheckConstraint('criterion_2_2 IS NULL OR (criterion_2_2 >= 0 AND criterion_2_2 <= 10)', name='scores_tech_faf_c2_2_check'),
+        CheckConstraint('criterion_2_3 IS NULL OR (criterion_2_3 >= 0 AND criterion_2_3 <= 10)', name='scores_tech_faf_c2_3_check'),
+        CheckConstraint('criterion_3_1 IS NULL OR (criterion_3_1 >= 0 AND criterion_3_1 <= 10)', name='scores_tech_faf_c3_1_check'),
+        CheckConstraint('criterion_3_2 IS NULL OR (criterion_3_2 >= 0 AND criterion_3_2 <= 10)', name='scores_tech_faf_c3_2_check'),
+        CheckConstraint('criterion_3_3 IS NULL OR (criterion_3_3 >= 0 AND criterion_3_3 <= 10)', name='scores_tech_faf_c3_3_check'),
+        CheckConstraint('criterion_3_4 IS NULL OR (criterion_3_4 >= 0 AND criterion_3_4 <= 10)', name='scores_tech_faf_c3_4_check'),
+        CheckConstraint('criterion_3_5 IS NULL OR (criterion_3_5 >= 0 AND criterion_3_5 <= 10)', name='scores_tech_faf_c3_5_check'),
+        CheckConstraint('criterion_3_6 IS NULL OR (criterion_3_6 >= 0 AND criterion_3_6 <= 10)', name='scores_tech_faf_c3_6_check'),
+        CheckConstraint('criterion_3_7 IS NULL OR (criterion_3_7 >= 0 AND criterion_3_7 <= 10)', name='scores_tech_faf_c3_7_check'),
+        CheckConstraint('criterion_3_8 IS NULL OR (criterion_3_8 >= 0 AND criterion_3_8 <= 10)', name='scores_tech_faf_c3_8_check'),
     )
 
     id_scores_tech_faf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)
-    id_performance: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
     
     # Группа 1: Базовая техника (5 подкритериев)
     criterion_1_1: Mapped[Optional[int]] = mapped_column(Integer)  # 1.1 Синхронность техники
@@ -204,11 +247,27 @@ class ScoresTechNaf(Base):
     __tablename__ = 'scores_tech_naf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_tech_naf', name='scores_tech_naf_pk'),
+        CheckConstraint('criterion_1_1 IS NULL OR (criterion_1_1 >= 0 AND criterion_1_1 <= 1)', name='scores_tech_naf_c1_1_check'),
+        CheckConstraint('criterion_1_2 IS NULL OR (criterion_1_2 >= 0 AND criterion_1_2 <= 1)', name='scores_tech_naf_c1_2_check'),
+        CheckConstraint('criterion_1_3 IS NULL OR (criterion_1_3 >= 0 AND criterion_1_3 <= 1)', name='scores_tech_naf_c1_3_check'),
+        CheckConstraint('criterion_1_4 IS NULL OR (criterion_1_4 >= 0 AND criterion_1_4 <= 1)', name='scores_tech_naf_c1_4_check'),
+        CheckConstraint('criterion_1_5 IS NULL OR (criterion_1_5 >= 0 AND criterion_1_5 <= 1)', name='scores_tech_naf_c1_5_check'),
+        CheckConstraint('criterion_2_1 IS NULL OR (criterion_2_1 >= 0 AND criterion_2_1 <= 2)', name='scores_tech_naf_c2_1_check'),
+        CheckConstraint('criterion_2_2 IS NULL OR (criterion_2_2 >= 0 AND criterion_2_2 <= 2)', name='scores_tech_naf_c2_2_check'),
+        CheckConstraint('criterion_2_3 IS NULL OR (criterion_2_3 >= 0 AND criterion_2_3 <= 1)', name='scores_tech_naf_c2_3_check'),
+        CheckConstraint('criterion_3_1 IS NULL OR (criterion_3_1 >= 0 AND criterion_3_1 <= 1)', name='scores_tech_naf_c3_1_check'),
+        CheckConstraint('criterion_3_2 IS NULL OR (criterion_3_2 >= 0 AND criterion_3_2 <= 1)', name='scores_tech_naf_c3_2_check'),
+        CheckConstraint('criterion_3_3 IS NULL OR (criterion_3_3 >= 0 AND criterion_3_3 <= 1)', name='scores_tech_naf_c3_3_check'),
+        CheckConstraint('criterion_3_4 IS NULL OR (criterion_3_4 >= 0 AND criterion_3_4 <= 1)', name='scores_tech_naf_c3_4_check'),
+        CheckConstraint('criterion_3_5 IS NULL OR (criterion_3_5 >= 0 AND criterion_3_5 <= 1)', name='scores_tech_naf_c3_5_check'),
+        CheckConstraint('criterion_3_6 IS NULL OR (criterion_3_6 >= 0 AND criterion_3_6 <= 1)', name='scores_tech_naf_c3_6_check'),
+        CheckConstraint('criterion_3_7 IS NULL OR (criterion_3_7 >= 0 AND criterion_3_7 <= 1)', name='scores_tech_naf_c3_7_check'),
+        CheckConstraint('criterion_3_8 IS NULL OR (criterion_3_8 >= 0 AND criterion_3_8 <= 1)', name='scores_tech_naf_c3_8_check'),
     )
 
     id_scores_tech_naf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)
-    id_performance: Mapped[int] = mapped_column(Integer, nullable=False)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
     
     # Группа 1: Базовая техника (5 подкритериев) - 0-1, шаг 0.05
     criterion_1_1: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1.1 Синхронность техники
@@ -258,8 +317,8 @@ class Judge(Base):
     )
 
     id_judge: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, nullable=False)  # Связь с Human
-    id_event: Mapped[Optional[int]] = mapped_column(Integer)  # На каком событии работает
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)  # Связь с Human
+    id_event: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'))  # На каком событии работает
     email: Mapped[str] = mapped_column(String(100), nullable=False)  # Email для логина
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)  # Хеш пароля
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # судья, главный судья, техник, артист и т.д.
