@@ -7,7 +7,9 @@ from app.db.database import Base, engine
 from app.core.config import settings
 from app.models import *
 from app.api.routes import auth_router, human_router, event_router, score_router, team_router, admin_router
+from app.api.routes import scores
 
+app.include_router(scores.router)
 # Create tables
 Base.metadata.create_all(bind=engine)
 
