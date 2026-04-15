@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from app.db.database import Base, engine
 from app.core.config import settings
 from app.models import *
-from app.api.routes import auth_router, human_router, event_router, score_router, team_router, admin_router
+from app.api.routes import auth_router, human_router, event_router, team_router, admin_router
 from app.api.routes import scores
 
 app.include_router(scores.router)
@@ -33,15 +33,15 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth_router)
+"""app.include_router(auth_router)
 app.include_router(human_router)
 app.include_router(event_router)
 app.include_router(score_router)
 app.include_router(team_router)
-app.include_router(admin_router)
-app.include_router(event_router)
-app.include_router(score_router)
-app.include_router(team_router)
+app.include_router(admin_router)"""
+
+
+
 
 
 @app.get("/")
