@@ -82,7 +82,77 @@ class HumanTeam(Base):
     )
 
     id_human_team: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_team: Mapped[str] = mapped_column(String, ForeignKey('team.team_name', ondelete='CASCADE'), nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class CriterionArtFaf(Base):
+    """
+    Справочник критериев артистических оценок ФАФ
+    """
+    __tablename__ = 'criterion_art_faf'
+    __table_args__ = (
+        PrimaryKeyConstraint('id_criterion_art_faf', name='criterion_art_faf_pk'),
+        UniqueConstraint('criterion_number', name='criterion_art_faf_number_unique'),
+    )
+
+    id_criterion_art_faf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    criterion_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    criterion_name: Mapped[str] = mapped_column(String, nullable=False)
+    min_value: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_value: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+
+
+class CriterionArtNaf(Base):
+    """
+    Справочник критериев артистических оценок НАФ
+    """
+    __tablename__ = 'criterion_art_naf'
+    __table_args__ = (
+        PrimaryKeyConstraint('id_criterion_art_naf', name='criterion_art_naf_pk'),
+        UniqueConstraint('criterion_number', name='criterion_art_naf_number_unique'),
+    )
+
+    id_criterion_art_naf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    criterion_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    criterion_name: Mapped[str] = mapped_column(String, nullable=False)
+    min_value: Mapped[float] = mapped_column(Numeric(precision=3, scale=2), nullable=False, default=0.0)
+    max_value: Mapped[float] = mapped_column(Numeric(precision=3, scale=2), nullable=False, default=1.0)
+
+
+class CriterionTechFaf(Base):
+    """
+    Справочник критериев технических оценок ФАФ
+    """
+    __tablename__ = 'criterion_tech_faf'
+    __table_args__ = (
+        PrimaryKeyConstraint('id_criterion_tech_faf', name='criterion_tech_faf_pk'),
+        UniqueConstraint('criterion_number', name='criterion_tech_faf_number_unique'),
+    )
+
+    id_criterion_tech_faf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    criterion_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    criterion_name: Mapped[str] = mapped_column(String, nullable=False)
+    min_value: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_value: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+
+
+class CriterionTechNaf(Base):
+    """
+    Справочник критериев технических оценок НАФ
+    """
+    __tablename__ = 'criterion_tech_naf'
+    __table_args__ = (
+        PrimaryKeyConstraint('id_criterion_tech_naf', name='criterion_tech_naf_pk'),
+        UniqueConstraint('criterion_number', name='criterion_tech_naf_number_unique'),
+    )
+
+    id_criterion_tech_naf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    criterion_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    criterion_name: Mapped[str] = mapped_column(String, nullable=False)
+    min_value: Mapped[float] = mapped_column(Numeric(precision=3, scale=2), nullable=False, default=0.0)
+    max_value: Mapped[float] = mapped_column(Numeric(precision=3, scale=2), nullable=False, default=1.0)
 
 
 class Performance(Base):
@@ -101,195 +171,77 @@ class Performance(Base):
 class ScoresArtFaf(Base):
     """
     Оценки по артистике в системе ФАФ
-    13 артистических критериев, диапазон 0-10, целые числа
+    Нормализованная структура: id_score, id_event, id_judge, id_criterion, score
     """
     __tablename__ = 'scores_art_faf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_art_faf', name='scores_art_faf_pk'),
-        CheckConstraint('criterion_1 IS NULL OR (criterion_1 >= 0 AND criterion_1 <= 10)', name='scores_art_faf_c1_check'),
-        CheckConstraint('criterion_2 IS NULL OR (criterion_2 >= 0 AND criterion_2 <= 10)', name='scores_art_faf_c2_check'),
-        CheckConstraint('criterion_3 IS NULL OR (criterion_3 >= 0 AND criterion_3 <= 10)', name='scores_art_faf_c3_check'),
-        CheckConstraint('criterion_4 IS NULL OR (criterion_4 >= 0 AND criterion_4 <= 10)', name='scores_art_faf_c4_check'),
-        CheckConstraint('criterion_5 IS NULL OR (criterion_5 >= 0 AND criterion_5 <= 10)', name='scores_art_faf_c5_check'),
-        CheckConstraint('criterion_6 IS NULL OR (criterion_6 >= 0 AND criterion_6 <= 10)', name='scores_art_faf_c6_check'),
-        CheckConstraint('criterion_7 IS NULL OR (criterion_7 >= 0 AND criterion_7 <= 10)', name='scores_art_faf_c7_check'),
-        CheckConstraint('criterion_8 IS NULL OR (criterion_8 >= 0 AND criterion_8 <= 10)', name='scores_art_faf_c8_check'),
-        CheckConstraint('criterion_9 IS NULL OR (criterion_9 >= 0 AND criterion_9 <= 10)', name='scores_art_faf_c9_check'),
-        CheckConstraint('criterion_10 IS NULL OR (criterion_10 >= 0 AND criterion_10 <= 10)', name='scores_art_faf_c10_check'),
-        CheckConstraint('criterion_11 IS NULL OR (criterion_11 >= 0 AND criterion_11 <= 10)', name='scores_art_faf_c11_check'),
-        CheckConstraint('criterion_12 IS NULL OR (criterion_12 >= 0 AND criterion_12 <= 10)', name='scores_art_faf_c12_check'),
-        CheckConstraint('criterion_13 IS NULL OR (criterion_13 >= 0 AND criterion_13 <= 10)', name='scores_art_faf_c13_check'),
+        CheckConstraint('score >= 0 AND score <= 10', name='scores_art_faf_score_check'),
     )
 
     id_scores_art_faf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'), nullable=False)
+    id_judge: Mapped[int] = mapped_column(Integer, ForeignKey('judge.id_judge', ondelete='CASCADE'), nullable=False)
     id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
-    
-    # 13 артистических критериев ФАФ (0-10, целые числа)
-    criterion_1: Mapped[Optional[int]] = mapped_column(Integer)  # 1. Музыкальность и ритм
-    criterion_2: Mapped[Optional[int]] = mapped_column(Integer)  # 2. Артистическое выражение
-    criterion_3: Mapped[Optional[int]] = mapped_column(Integer)  # 3. Работа с музыкой
-    criterion_4: Mapped[Optional[int]] = mapped_column(Integer)  # 4. Сценическое присутствие
-    criterion_5: Mapped[Optional[int]] = mapped_column(Integer)  # 5. Характер и эмоции
-    criterion_6: Mapped[Optional[int]] = mapped_column(Integer)  # 6. Визуальная эффектность
-    criterion_7: Mapped[Optional[int]] = mapped_column(Integer)  # 7. История/Повествование
-    criterion_8: Mapped[Optional[int]] = mapped_column(Integer)  # 8. Оригинальность идеи
-    criterion_9: Mapped[Optional[int]] = mapped_column(Integer)  # 9. Костюм и реквизит
-    criterion_10: Mapped[Optional[int]] = mapped_column(Integer)  # 10. Мизансценирование пространства
-    criterion_11: Mapped[Optional[int]] = mapped_column(Integer)  # 11. Переходы и связки
-    criterion_12: Mapped[Optional[int]] = mapped_column(Integer)  # 12. Техсредства (свет, звук)
-    criterion_13: Mapped[Optional[int]] = mapped_column(Integer)  # 13. Общее впечатление
+    id_criterion: Mapped[int] = mapped_column(Integer, ForeignKey('criterion_art_faf.id_criterion_art_faf', ondelete='CASCADE'), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class ScoresArtNaf(Base):
     """
     Оценки по артистике в системе НАФ
-    13 артистических критериев, диапазон 0-1, шаг 0.05
+    Нормализованная структура: id_score, id_event, id_judge, id_criterion, score
     """
     __tablename__ = 'scores_art_naf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_art_naf', name='scores_art_naf_pk'),
-        CheckConstraint('criterion_1 IS NULL OR (criterion_1 >= 0 AND criterion_1 <= 1)', name='scores_art_naf_c1_check'),
-        CheckConstraint('criterion_2 IS NULL OR (criterion_2 >= 0 AND criterion_2 <= 1)', name='scores_art_naf_c2_check'),
-        CheckConstraint('criterion_3 IS NULL OR (criterion_3 >= 0 AND criterion_3 <= 1)', name='scores_art_naf_c3_check'),
-        CheckConstraint('criterion_4 IS NULL OR (criterion_4 >= 0 AND criterion_4 <= 1)', name='scores_art_naf_c4_check'),
-        CheckConstraint('criterion_5 IS NULL OR (criterion_5 >= 0 AND criterion_5 <= 1)', name='scores_art_naf_c5_check'),
-        CheckConstraint('criterion_6 IS NULL OR (criterion_6 >= 0 AND criterion_6 <= 1)', name='scores_art_naf_c6_check'),
-        CheckConstraint('criterion_7 IS NULL OR (criterion_7 >= 0 AND criterion_7 <= 1)', name='scores_art_naf_c7_check'),
-        CheckConstraint('criterion_8 IS NULL OR (criterion_8 >= 0 AND criterion_8 <= 1)', name='scores_art_naf_c8_check'),
-        CheckConstraint('criterion_9 IS NULL OR (criterion_9 >= 0 AND criterion_9 <= 0.5)', name='scores_art_naf_c9_check'),
-        CheckConstraint('criterion_10 IS NULL OR (criterion_10 >= 0 AND criterion_10 <= 1)', name='scores_art_naf_c10_check'),
-        CheckConstraint('criterion_11 IS NULL OR (criterion_11 >= 0 AND criterion_11 <= 1)', name='scores_art_naf_c11_check'),
-        CheckConstraint('criterion_12 IS NULL OR (criterion_12 >= 0 AND criterion_12 <= 0.5)', name='scores_art_naf_c12_check'),
-        CheckConstraint('criterion_13 IS NULL OR (criterion_13 >= 0 AND criterion_13 <= 1)', name='scores_art_naf_c13_check'),
+        CheckConstraint('score >= 0 AND score <= 1', name='scores_art_naf_score_check'),
     )
 
     id_scores_art_naf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'), nullable=False)
+    id_judge: Mapped[int] = mapped_column(Integer, ForeignKey('judge.id_judge', ondelete='CASCADE'), nullable=False)
     id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
-    
-    # 13 артистических критериев НАФ (0-1, шаг 0.05)
-    criterion_1: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1. Музыкальность и ритм
-    criterion_2: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 2. Артистическое выражение
-    criterion_3: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3. Работа с музыкой
-    criterion_4: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 4. Сценическое присутствие
-    criterion_5: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 5. Характер и эмоции
-    criterion_6: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 6. Визуальная эффектность
-    criterion_7: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 7. История/Повествование
-    criterion_8: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 8. Оригинальность идеи
-    criterion_9: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 9. Костюм и реквизит (0-0.5)
-    criterion_10: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 10. Мизансценирование пространства
-    criterion_11: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 11. Переходы и связки
-    criterion_12: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 12. Техсредства (свет, звук) (0-0.5)
-    criterion_13: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 13. Общее впечатление
+    id_criterion: Mapped[int] = mapped_column(Integer, ForeignKey('criterion_art_naf.id_criterion_art_naf', ondelete='CASCADE'), nullable=False)
+    score: Mapped[float] = mapped_column(Numeric(precision=3, scale=2), nullable=False)
 
 
 class ScoresTechFaf(Base):
     """
     Оценки по технике в системе ФАФ
-    16 технических подкритериев: Базовая техника (1.1-1.5), Мастерство (2.1-2.3), Сложность (3.1-3.8)
-    Диапазон 0-10, целые числа
+    Нормализованная структура: id_score, id_event, id_judge, id_criterion, score
     """
     __tablename__ = 'scores_tech_faf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_tech_faf', name='scores_tech_faf_pk'),
-        CheckConstraint('criterion_1_1 IS NULL OR (criterion_1_1 >= 0 AND criterion_1_1 <= 10)', name='scores_tech_faf_c1_1_check'),
-        CheckConstraint('criterion_1_2 IS NULL OR (criterion_1_2 >= 0 AND criterion_1_2 <= 10)', name='scores_tech_faf_c1_2_check'),
-        CheckConstraint('criterion_1_3 IS NULL OR (criterion_1_3 >= 0 AND criterion_1_3 <= 10)', name='scores_tech_faf_c1_3_check'),
-        CheckConstraint('criterion_1_4 IS NULL OR (criterion_1_4 >= 0 AND criterion_1_4 <= 10)', name='scores_tech_faf_c1_4_check'),
-        CheckConstraint('criterion_1_5 IS NULL OR (criterion_1_5 >= 0 AND criterion_1_5 <= 10)', name='scores_tech_faf_c1_5_check'),
-        CheckConstraint('criterion_2_1 IS NULL OR (criterion_2_1 >= 0 AND criterion_2_1 <= 10)', name='scores_tech_faf_c2_1_check'),
-        CheckConstraint('criterion_2_2 IS NULL OR (criterion_2_2 >= 0 AND criterion_2_2 <= 10)', name='scores_tech_faf_c2_2_check'),
-        CheckConstraint('criterion_2_3 IS NULL OR (criterion_2_3 >= 0 AND criterion_2_3 <= 10)', name='scores_tech_faf_c2_3_check'),
-        CheckConstraint('criterion_3_1 IS NULL OR (criterion_3_1 >= 0 AND criterion_3_1 <= 10)', name='scores_tech_faf_c3_1_check'),
-        CheckConstraint('criterion_3_2 IS NULL OR (criterion_3_2 >= 0 AND criterion_3_2 <= 10)', name='scores_tech_faf_c3_2_check'),
-        CheckConstraint('criterion_3_3 IS NULL OR (criterion_3_3 >= 0 AND criterion_3_3 <= 10)', name='scores_tech_faf_c3_3_check'),
-        CheckConstraint('criterion_3_4 IS NULL OR (criterion_3_4 >= 0 AND criterion_3_4 <= 10)', name='scores_tech_faf_c3_4_check'),
-        CheckConstraint('criterion_3_5 IS NULL OR (criterion_3_5 >= 0 AND criterion_3_5 <= 10)', name='scores_tech_faf_c3_5_check'),
-        CheckConstraint('criterion_3_6 IS NULL OR (criterion_3_6 >= 0 AND criterion_3_6 <= 10)', name='scores_tech_faf_c3_6_check'),
-        CheckConstraint('criterion_3_7 IS NULL OR (criterion_3_7 >= 0 AND criterion_3_7 <= 10)', name='scores_tech_faf_c3_7_check'),
-        CheckConstraint('criterion_3_8 IS NULL OR (criterion_3_8 >= 0 AND criterion_3_8 <= 10)', name='scores_tech_faf_c3_8_check'),
+        CheckConstraint('score >= 0 AND score <= 10', name='scores_tech_faf_score_check'),
     )
 
     id_scores_tech_faf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'), nullable=False)
+    id_judge: Mapped[int] = mapped_column(Integer, ForeignKey('judge.id_judge', ondelete='CASCADE'), nullable=False)
     id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
-    
-    # Группа 1: Базовая техника (5 подкритериев)
-    criterion_1_1: Mapped[Optional[int]] = mapped_column(Integer)  # 1.1 Синхронность техники
-    criterion_1_2: Mapped[Optional[int]] = mapped_column(Integer)  # 1.2 Согласованность вооруженных и невооруженных действий
-    criterion_1_3: Mapped[Optional[int]] = mapped_column(Integer)  # 1.3 Правильность техники
-    criterion_1_4: Mapped[Optional[int]] = mapped_column(Integer)  # 1.4 Выравнивество движений
-    criterion_1_5: Mapped[Optional[int]] = mapped_column(Integer)  # 1.5 Легкость выполнения
-    
-    # Группа 2: Мастерство (3 подкритерия)
-    criterion_2_1: Mapped[Optional[int]] = mapped_column(Integer)  # 2.1 Слаженность (группы) / Органичность (соло)
-    criterion_2_2: Mapped[Optional[int]] = mapped_column(Integer)  # 2.2 Достоверность
-    criterion_2_3: Mapped[Optional[int]] = mapped_column(Integer)  # 2.3 Качество исполнения
-    
-    # Группа 3: Сложность и уровень (8 подкритериев)
-    criterion_3_1: Mapped[Optional[int]] = mapped_column(Integer)  # 3.1 Темп (отсутствие проседаний, заминок)
-    criterion_3_2: Mapped[Optional[int]] = mapped_column(Integer)  # 3.2 Тактическая сложность
-    criterion_3_3: Mapped[Optional[int]] = mapped_column(Integer)  # 3.3 Координационно-двигательная сложность
-    criterion_3_4: Mapped[Optional[int]] = mapped_column(Integer)  # 3.4 Поощрение за сложность
-    criterion_3_5: Mapped[Optional[int]] = mapped_column(Integer)  # 3.5 Разнообразие действий нападения
-    criterion_3_6: Mapped[Optional[int]] = mapped_column(Integer)  # 3.6 Разнообразие действий обороны
-    criterion_3_7: Mapped[Optional[int]] = mapped_column(Integer)  # 3.7 Разнообразие действий подготовки
-    criterion_3_8: Mapped[Optional[int]] = mapped_column(Integer)  # 3.8 Общий уровень
+    id_criterion: Mapped[int] = mapped_column(Integer, ForeignKey('criterion_tech_faf.id_criterion_tech_faf', ondelete='CASCADE'), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class ScoresTechNaf(Base):
     """
     Оценки по технике в системе НАФ
-    16 технических подкритериев: Базовая техника (1.1-1.5), Мастерство (2.1-2.3), Сложность (3.1-3.8)
-    Диапазон 0-1 (для большинства), 0-2 (для слаженности/достоверности), шаг 0.05
+    Нормализованная структура: id_score, id_event, id_judge, id_criterion, score
     """
     __tablename__ = 'scores_tech_naf'
     __table_args__ = (
         PrimaryKeyConstraint('id_scores_tech_naf', name='scores_tech_naf_pk'),
-        CheckConstraint('criterion_1_1 IS NULL OR (criterion_1_1 >= 0 AND criterion_1_1 <= 1)', name='scores_tech_naf_c1_1_check'),
-        CheckConstraint('criterion_1_2 IS NULL OR (criterion_1_2 >= 0 AND criterion_1_2 <= 1)', name='scores_tech_naf_c1_2_check'),
-        CheckConstraint('criterion_1_3 IS NULL OR (criterion_1_3 >= 0 AND criterion_1_3 <= 1)', name='scores_tech_naf_c1_3_check'),
-        CheckConstraint('criterion_1_4 IS NULL OR (criterion_1_4 >= 0 AND criterion_1_4 <= 1)', name='scores_tech_naf_c1_4_check'),
-        CheckConstraint('criterion_1_5 IS NULL OR (criterion_1_5 >= 0 AND criterion_1_5 <= 1)', name='scores_tech_naf_c1_5_check'),
-        CheckConstraint('criterion_2_1 IS NULL OR (criterion_2_1 >= 0 AND criterion_2_1 <= 2)', name='scores_tech_naf_c2_1_check'),
-        CheckConstraint('criterion_2_2 IS NULL OR (criterion_2_2 >= 0 AND criterion_2_2 <= 2)', name='scores_tech_naf_c2_2_check'),
-        CheckConstraint('criterion_2_3 IS NULL OR (criterion_2_3 >= 0 AND criterion_2_3 <= 1)', name='scores_tech_naf_c2_3_check'),
-        CheckConstraint('criterion_3_1 IS NULL OR (criterion_3_1 >= 0 AND criterion_3_1 <= 1)', name='scores_tech_naf_c3_1_check'),
-        CheckConstraint('criterion_3_2 IS NULL OR (criterion_3_2 >= 0 AND criterion_3_2 <= 1)', name='scores_tech_naf_c3_2_check'),
-        CheckConstraint('criterion_3_3 IS NULL OR (criterion_3_3 >= 0 AND criterion_3_3 <= 1)', name='scores_tech_naf_c3_3_check'),
-        CheckConstraint('criterion_3_4 IS NULL OR (criterion_3_4 >= 0 AND criterion_3_4 <= 1)', name='scores_tech_naf_c3_4_check'),
-        CheckConstraint('criterion_3_5 IS NULL OR (criterion_3_5 >= 0 AND criterion_3_5 <= 1)', name='scores_tech_naf_c3_5_check'),
-        CheckConstraint('criterion_3_6 IS NULL OR (criterion_3_6 >= 0 AND criterion_3_6 <= 1)', name='scores_tech_naf_c3_6_check'),
-        CheckConstraint('criterion_3_7 IS NULL OR (criterion_3_7 >= 0 AND criterion_3_7 <= 1)', name='scores_tech_naf_c3_7_check'),
-        CheckConstraint('criterion_3_8 IS NULL OR (criterion_3_8 >= 0 AND criterion_3_8 <= 1)', name='scores_tech_naf_c3_8_check'),
+        CheckConstraint('score >= 0 AND score <= 2', name='scores_tech_naf_score_check'),
     )
 
     id_scores_tech_naf: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    id_human: Mapped[int] = mapped_column(Integer, ForeignKey('human.id', ondelete='CASCADE'), nullable=False)
+    id_event: Mapped[int] = mapped_column(Integer, ForeignKey('event.id_event', ondelete='CASCADE'), nullable=False)
+    id_judge: Mapped[int] = mapped_column(Integer, ForeignKey('judge.id_judge', ondelete='CASCADE'), nullable=False)
     id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
-    
-    # Группа 1: Базовая техника (5 подкритериев) - 0-1, шаг 0.05
-    criterion_1_1: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1.1 Синхронность техники
-    criterion_1_2: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1.2 Согласованность вооруженных и невооруженных действий
-    criterion_1_3: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1.3 Правильность техники
-    criterion_1_4: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1.4 Выравнивество движений
-    criterion_1_5: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 1.5 Легкость выполнения
-    
-    # Группа 2: Мастерство (3 подкритерия)
-    criterion_2_1: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 2.1 Слаженность (группы) / Органичность (соло) - 0-2
-    criterion_2_2: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 2.2 Достоверность - 0-2
-    criterion_2_3: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 2.3 Качество исполнения - 0-1
-    
-    # Группа 3: Сложность и уровень (8 подкритериев) - 0-1, шаг 0.05
-    criterion_3_1: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.1 Темп (отсутствие проседаний, заминок)
-    criterion_3_2: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.2 Тактическая сложность
-    criterion_3_3: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.3 Координационно-двигательная сложность
-    criterion_3_4: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.4 Поощрение за сложность
-    criterion_3_5: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.5 Разнообразие действий нападения
-    criterion_3_6: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.6 Разнообразие действий обороны
-    criterion_3_7: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.7 Разнообразие действий подготовки
-    criterion_3_8: Mapped[Optional[float]] = mapped_column(Numeric(precision=3, scale=2))  # 3.8 Общий уровень
+    id_criterion: Mapped[int] = mapped_column(Integer, ForeignKey('criterion_tech_naf.id_criterion_tech_naf', ondelete='CASCADE'), nullable=False)
+    score: Mapped[float] = mapped_column(Numeric(precision=3, scale=2), nullable=False)
 
 
 class Team(Base):

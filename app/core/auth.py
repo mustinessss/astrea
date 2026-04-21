@@ -1,5 +1,5 @@
 """JWT токены и аутентификация"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -29,19 +29,57 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Создать JWT токен"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now() + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
+        expire = datetime.now(timezone.utc) + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Создать refresh токен (дольше живет)"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    to_encode.update({"exp": expire, "type": "refresh"})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
+
+def create_token_pair(data: dict) -> tuple[str, str, int]:
+    """Создать пару access + refresh токенов"""
+    access_token = create_access_token(data)
+    refresh_token = create_refresh_token(data)
+    
+    # Вычислить время жизни access токена в секундах
+    expires_in = int(settings.ACCESS_TOKEN_EXPIRE_HOURS * 3600)
+    
+    return access_token, refresh_token, expires_in
+
+
 def decode_access_token(token: str) -> dict:
-    """Декодировать JWT токен"""
+    """Декодировать access токен"""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        token_type = payload.get("type", "access")
+        if token_type == "refresh":
+            return None  # Не должен быть refresh токен
+        return payload
+    except JWTError:
+        return None
+
+
+def decode_refresh_token(token: str) -> dict:
+    """Декодировать refresh токен"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("type") != "refresh":
+            return None
         return payload
     except JWTError:
         return None
