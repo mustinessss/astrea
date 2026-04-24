@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 
-from app.api.routes import auth_router, event_router, human_router, score_router, team_router
+from app.api.routes import auth_router, event_router, human_router, score_router, team_router,admin_router
 from app.api.services.calculation_service import calculate_performance_score
 from app.api.services.event_calc import calculate_event_results_parallel
 from app.api.services.score_service import upsert_score
@@ -49,7 +49,7 @@ app.include_router(human_router)
 app.include_router(event_router)
 app.include_router(score_router)
 app.include_router(team_router)
-
+app.include_router(admin_router)
 
 # ───────────────────────── Web pages ─────────────────────────
 
@@ -159,40 +159,89 @@ async def dashboard_page(request: Request):
     return templates.TemplateResponse("judge_dashboard.html", context)
 
 
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request):
-    """Сводка по событию — для главного судьи / преподавателя на защите."""
+def _require_main_judge(request: Request) -> Optional[Judge]:
+    """Достаёт судью из cookie и пускает только если роль main_judge/admin.
+    Возвращает Judge или None — если None, нужно делать редирект.
+    """
     judge_id = request.cookies.get("judge_id")
     if not judge_id:
-        return RedirectResponse(url="/", status_code=302)
-
+        return None
     db = SessionLocal()
     try:
         judge = db.query(Judge).filter(Judge.id_judge == int(judge_id)).first()
-        if not judge or judge.id_event is None:
-            return RedirectResponse(url="/dashboard", status_code=302)
+    finally:
+        db.close()
+    if not judge or judge.role not in ("main_judge", "admin"):
+        return None
+    return judge
 
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    """Сводка по событию — только для главного судьи."""
+    judge = _require_main_judge(request)
+    if judge is None:
+        return RedirectResponse(url="/dashboard", status_code=302)
+    if judge.id_event is None:
+        return RedirectResponse(url="/admin/judges", status_code=302)
+
+    db = SessionLocal()
+    try:
         event = db.query(Event).filter(Event.id_event == judge.id_event).first()
-
-        # Пересчёт итогов идёт в пуле потоков (см. event_calc.py).
-        # Каждое выступление считается отдельным потоком со своей сессией БД.
         rows = calculate_event_results_parallel(judge.id_event)
-
-        # Счётчики для шапки.
-        judges_count = db.query(func.count(Judge.id_judge)).filter(Judge.id_event == judge.id_event).scalar() or 0
-        scores_count = db.query(func.count(Score.id_scores)).filter(Score.id_event == judge.id_event).scalar() or 0
+        judges_count = db.query(func.count(Judge.id_judge)).filter(
+            Judge.id_event == judge.id_event
+        ).scalar() or 0
+        scores_count = db.query(func.count(Score.id_scores)).filter(
+            Score.id_event == judge.id_event
+        ).scalar() or 0
     finally:
         db.close()
 
-    context = {
+    return templates.TemplateResponse("admin.html", {
         "request": request,
         "event": event,
         "rows": rows,
         "judges_count": judges_count,
         "perf_count": len(rows),
         "scores_count": scores_count,
-    }
-    return templates.TemplateResponse("admin.html", context)
+    })
+
+
+@app.get("/admin/judges", response_class=HTMLResponse)
+async def admin_judges_page(request: Request):
+    """Страница управления судьями: создать судью из человека, раздать роли и пароли."""
+    judge = _require_main_judge(request)
+    if judge is None:
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    db = SessionLocal()
+    try:
+        humans = db.query(Human).order_by(Human.last_name, Human.first_name).all()
+        events = db.query(Event).order_by(Event.id_event).all()
+        judges = db.query(Judge).order_by(Judge.id_judge).all()
+        humans_by_id = {h.id: h for h in db.query(Human).all()}
+        judges_view = []
+        for j in judges:
+            h = humans_by_id.get(j.id_human)
+            judges_view.append({
+                "id_judge": j.id_judge,
+                "full_name": f"{h.last_name} {h.first_name}".strip() if h else "—",
+                "email": j.email,
+                "role": j.role,
+                "is_active": j.is_active,
+                "id_event": j.id_event,
+            })
+    finally:
+        db.close()
+
+    return templates.TemplateResponse("admin_judges.html", {
+        "request": request,
+        "humans": humans,
+        "events": events,
+        "judges": judges_view,
+        "current_event_id": judge.id_event,
+    })
 
 
 # ───────────────────────── Judging form (UI) ─────────────────────────

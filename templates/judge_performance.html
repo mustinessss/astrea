@@ -12,13 +12,25 @@
         .back-btn { background: #6c757d; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; display: inline-block; margin-bottom: 14px; }
         .back-btn:hover { background: #5a6268; }
         .panel { background: #fff; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
-        .criterion { padding: 14px 0; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 1fr 230px 70px; align-items: center; gap: 16px; }
+        .criterion { padding: 16px 0; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 1.2fr 2fr 110px; align-items: center; gap: 18px; }
         .criterion:last-child { border-bottom: none; }
         .criterion .name { font-weight: 600; color: #333; }
-        .criterion input[type=range] { width: 100%; }
-        .criterion .val { font-weight: 700; color: #667eea; text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
-        .criterion.scored .name::after { content: " ✓"; color: #28a745; }
-        .submit-row { margin-top: 22px; text-align: right; }
+        .slider-wrap { display: flex; align-items: center; gap: 10px; }
+        .slider-wrap .edge { font-size: 12px; color: #888; min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+        .slider-wrap input[type=range] { flex: 1; accent-color: #667eea; height: 6px; }
+        .num-input { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+        .num-input input[type=number] {
+            width: 100%; box-sizing: border-box; padding: 8px 10px;
+            border: 1px solid #ced4da; border-radius: 6px;
+            font-size: 18px; font-weight: 700; color: #667eea;
+            text-align: right; font-variant-numeric: tabular-nums;
+        }
+        .num-input input[type=number]:focus { outline: none; border-color: #667eea; }
+        .num-input .step-hint { font-size: 11px; color: #888; text-align: right; }
+        .criterion.scored .name::after { content: " ✓"; color: #28a745; margin-left: 6px; }
+        .submit-row { margin-top: 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .total-line { font-size: 14px; color: #555; }
+        .total-line b { color: #667eea; font-size: 18px; font-variant-numeric: tabular-nums; }
         .btn { padding: 12px 26px; border: 0; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; }
         .btn-primary { background: #28a745; color: #fff; }
         .btn-primary:hover { background: #218838; }
@@ -36,6 +48,9 @@
         .toast { position: fixed; top: 20px; right: 20px; background: #28a745; color: #fff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: none; z-index: 200; }
         .toast.error { background: #dc3545; }
         .toast.show { display: block; }
+        @media (max-width: 700px) {
+            .criterion { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -49,6 +64,7 @@
     <div class="panel">
         <div id="criteria">
             {% for c in criteria %}
+            {% set cur = existing_scores.get(c.id_criterion, 0)|float %}
             <div class="criterion {% if existing_scores.get(c.id_criterion) is not none %}scored{% endif %}"
                  data-id="{{ c.id_criterion }}"
                  data-name="{{ c.name_criterion }}"
@@ -56,13 +72,25 @@
                  data-max="{{ c.start_point }}"
                  data-step="{{ c.step }}">
                 <div class="name">{{ c.name_criterion }}</div>
-                <input type="range"
-                       min="0"
-                       max="{{ c.start_point }}"
-                       step="{{ c.step }}"
-                       value="{{ existing_scores.get(c.id_criterion, 0) }}"
-                       oninput="this.parentNode.querySelector('.val').textContent = (+this.value).toFixed(2)">
-                <div class="val">{{ '%.2f'|format(existing_scores.get(c.id_criterion, 0)|float) }}</div>
+                <div class="slider-wrap">
+                    <span class="edge">0</span>
+                    <input type="range"
+                           class="range"
+                           min="0"
+                           max="{{ c.start_point }}"
+                           step="{{ c.step }}"
+                           value="{{ '%.2f'|format(cur) }}">
+                    <span class="edge">{{ '%.2f'|format(c.start_point|float) }}</span>
+                </div>
+                <div class="num-input">
+                    <input type="number"
+                           class="num"
+                           min="0"
+                           max="{{ c.start_point }}"
+                           step="{{ c.step }}"
+                           value="{{ '%.2f'|format(cur) }}">
+                    <span class="step-hint">шаг {{ '%.2f'|format(c.step|float) }}</span>
+                </div>
             </div>
             {% else %}
             <p style="color:#888">Нет критериев под роль «{{ judge.role }}» в этом событии.</p>
@@ -70,6 +98,7 @@
         </div>
 
         <div class="submit-row">
+            <div class="total-line">Сумма по выставленным критериям: <b id="running-sum">0.00</b></div>
             <button class="btn btn-primary" onclick="openConfirm()">Отправить</button>
         </div>
     </div>
@@ -90,27 +119,61 @@
     <script>
     const PERFORMANCE_ID = {{ performance.id_performance }};
 
+    // Двусторонняя синхронизация: ползунок ↔ число.
+    function clamp(val, min, max) { return Math.min(max, Math.max(min, val)); }
+
+    function snap(val, step, min) {
+        if (step <= 0) return val;
+        const steps = Math.round((val - min) / step);
+        return +(min + steps * step).toFixed(4);
+    }
+
+    document.querySelectorAll('.criterion').forEach(el => {
+        const range = el.querySelector('.range');
+        const num = el.querySelector('.num');
+        const min = parseFloat(el.dataset.min);
+        const max = parseFloat(el.dataset.max);
+        const step = parseFloat(el.dataset.step);
+
+        function applyToBoth(rawVal, source) {
+            let v = parseFloat(rawVal);
+            if (isNaN(v)) v = 0;
+            v = clamp(snap(v, step, min), min, max);
+            const formatted = v.toFixed(2);
+            if (source !== range) range.value = formatted;
+            if (source !== num) num.value = formatted;
+            updateRunningSum();
+        }
+        range.addEventListener('input', () => applyToBoth(range.value, range));
+        num.addEventListener('input', () => applyToBoth(num.value, num));
+        num.addEventListener('blur', () => applyToBoth(num.value, null));
+    });
+
+    function updateRunningSum() {
+        const sum = Array.from(document.querySelectorAll('.criterion .range'))
+            .reduce((acc, r) => acc + parseFloat(r.value || 0), 0);
+        const el = document.getElementById('running-sum');
+        if (el) el.textContent = sum.toFixed(2);
+    }
+    updateRunningSum();
+
     function collect() {
         return Array.from(document.querySelectorAll('.criterion')).map(el => ({
             criterion_id: parseInt(el.dataset.id),
             name: el.dataset.name,
-            value: parseFloat(el.querySelector('input[type=range]').value),
+            value: parseFloat(el.querySelector('.range').value),
         }));
     }
 
     function openConfirm() {
         const items = collect();
         if (items.length === 0) return;
-        const summary = document.getElementById('summary');
-        summary.innerHTML = items.map(i =>
+        document.getElementById('summary').innerHTML = items.map(i =>
             `<div class="row"><span>${i.name}</span><span class="v">${i.value.toFixed(2)}</span></div>`
         ).join('');
         document.getElementById('modal').classList.add('open');
     }
-
-    function closeConfirm() {
-        document.getElementById('modal').classList.remove('open');
-    }
+    function closeConfirm() { document.getElementById('modal').classList.remove('open'); }
 
     function showToast(msg, isError) {
         const t = document.getElementById('toast');

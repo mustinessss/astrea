@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление судьями — Астрея</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 18px 22px; border-radius: 10px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .nav-actions { display: flex; gap: 8px; }
+        .btn { padding: 8px 14px; border: 0; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; font-size: 14px; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-light { background: #fff; color: #764ba2; }
+        .btn-primary { background: #28a745; color: #fff; }
+        .btn-warn { background: #ffc107; color: #6b5400; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn:hover { opacity: .92; }
+        .grid { display: grid; grid-template-columns: 380px 1fr; gap: 18px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .panel { background: #fff; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        .panel h2 { margin-top: 0; font-size: 18px; color: #333; }
+        .field { margin-bottom: 12px; }
+        .field label { display: block; margin-bottom: 6px; font-weight: 600; color: #495057; font-size: 14px; }
+        .field input, .field select { width: 100%; padding: 9px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        .field input:focus, .field select:focus { outline: none; border-color: #667eea; }
+        .hint { color: #6c757d; font-size: 12px; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #f1f3f7; font-size: 12px; text-transform: uppercase; color: #555; letter-spacing: .03em; }
+        tr:last-child td { border-bottom: none; }
+        .role-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; background: #e9ecef; color: #333; font-size: 12px; font-weight: 700; }
+        .role-pill.technical { background: #cfe2ff; color: #084298; }
+        .role-pill.artistry  { background: #f8d7da; color: #842029; }
+        .role-pill.main_judge, .role-pill.admin { background: #fff3cd; color: #6b5400; }
+        .role-pill.timekeeper { background: #d1e7dd; color: #0f5132; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+        .status-dot.on { background: #28a745; } .status-dot.off { background: #dc3545; }
+        .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .toast { position: fixed; top: 20px; right: 20px; background: #28a745; color: #fff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: none; z-index: 200; max-width: 380px; }
+        .toast.error { background: #dc3545; } .toast.show { display: block; }
+        .pwd-result { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 12px; border-radius: 6px; margin-top: 10px; font-family: monospace; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Управление судьями</h1>
+            <div style="opacity:.85;font-size:13px;margin-top:4px">Создание судей из уже существующих людей в базе</div>
+        </div>
+        <div class="nav-actions">
+            <a href="/admin" class="btn btn-light">Итоги события</a>
+            <a href="/dashboard" class="btn btn-secondary">Дашборд</a>
+            <a href="/" class="btn btn-secondary">Выйти</a>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h2>Создать судью</h2>
+            <form id="create-form">
+                <div class="field">
+                    <label for="id_human">Человек</label>
+                    <select id="id_human" name="id_human" required>
+                        <option value="">— выберите —</option>
+                        {% for h in humans %}
+                        <option value="{{ h.id }}" data-email="{{ h.email or '' }}">
+                            {{ h.last_name }} {{ h.first_name }}{% if h.patronymic %} {{ h.patronymic }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="role">Роль</label>
+                    <select id="role" name="role" required>
+                        <option value="technical">Технический судья</option>
+                        <option value="artistry">Художественный судья</option>
+                        <option value="timekeeper">Таймкипер</option>
+                        <option value="main_judge">Главный судья</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="id_event">Событие (опционально)</label>
+                    <select id="id_event" name="id_event">
+                        <option value="">— без события —</option>
+                        {% for e in events %}
+                        <option value="{{ e.id_event }}" {% if current_event_id == e.id_event %}selected{% endif %}>
+                            {{ e.name_event or "Событие" }} ({{ e.city }}, {{ e.date }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="email">Email (логин)</label>
+                    <input type="text" id="email" name="email" required placeholder="judge@example.com">
+                    <div class="hint">Используется как логин при входе по паре email/пароль.</div>
+                </div>
+
+                <div class="field">
+                    <label for="password">Пароль</label>
+                    <input type="text" id="password" name="password" placeholder="Оставьте пустым — сгенерируем случайный" minlength="8">
+                    <div class="hint">Минимум 8 символов. Если пусто — сервер сгенерирует и покажет.</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%">Создать судью</button>
+                <div id="pwd-result" class="pwd-result" style="display:none"></div>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h2>Существующие судьи</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ФИО</th>
+                        <th>Email</th>
+                        <th>Роль</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="judges-tbody">
+                {% for j in judges %}
+                <tr data-id="{{ j.id_judge }}">
+                    <td>{{ j.full_name }}</td>
+                    <td>{{ j.email }}</td>
+                    <td><span class="role-pill {{ j.role }}">{{ j.role }}</span></td>
+                    <td>
+                        <span class="status-dot {% if j.is_active %}on{% else %}off{% endif %}"></span>
+                        {% if j.is_active %}активен{% else %}отключён{% endif %}
+                    </td>
+                    <td class="row-actions">
+                        <button class="btn btn-warn" onclick="resetPassword({{ j.id_judge }})">Новый пароль</button>
+                        <button class="btn btn-danger" onclick="toggleActive({{ j.id_judge }})">
+                            {% if j.is_active %}Отключить{% else %}Включить{% endif %}
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="color:#888;text-align:center;padding:20px">Судей пока нет</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // Авто-подстановка email из выбранного человека.
+    document.getElementById('id_human').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        const emailInput = document.getElementById('email');
+        if (opt && opt.dataset.email && !emailInput.value) {
+            emailInput.value = opt.dataset.email;
+        }
+    });
+
+    function showToast(msg, isError) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.toggle('error', !!isError);
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    document.getElementById('create-form').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const fd = new FormData(ev.target);
+        const payload = {
+            id_human: parseInt(fd.get('id_human')),
+            role: fd.get('role'),
+            email: fd.get('email').trim(),
+        };
+        const eventVal = fd.get('id_event');
+        if (eventVal) payload.id_event = parseInt(eventVal);
+        const pwd = fd.get('password').trim();
+        if (pwd) payload.password = pwd;
+
+        try {
+            const res = await fetch('/admin/judges', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || ('HTTP ' + res.status));
+            }
+            const data = await res.json();
+            showToast('Судья создан');
+            const out = document.getElementById('pwd-result');
+            if (data.generated_password) {
+                out.style.display = 'block';
+                out.innerHTML = 'Сгенерированный пароль для <b>' + data.email +
+                    '</b>: <b>' + data.generated_password + '</b><br>' +
+                    '<span style="color:#856404">Сохраните его — пароль больше не покажется.</span>';
+            } else {
+                out.style.display = 'none';
+            }
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) {
+            showToast('Ошибка: ' + e.message, true);
+        }
+    });
+
+    async function resetPassword(id) {
+        if (!confirm('Сгенерировать новый пароль для этого судьи?')) return;
+        try {
+            const res = await fetch('/admin/judges/' + id + '/reset-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({}),
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            alert('Новый пароль для ' + data.email + ':\n\n' + data.generated_password +
+                  '\n\nСохраните его — пароль больше не покажется.');
+        } catch (e) {
+            showToast('Ошибка: ' + e.message, true);
+        }
+    }
+
+    async function toggleActive(id) {
+        try {
+            const res = await fetch('/admin/judges/' + id + '/toggle-active', {method: 'POST'});
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            window.location.reload();
+        } catch (e) {
+            showToast('Ошибка: ' + e.message, true);
+        }
+    }
+    </script>
+</body>
+</html>
