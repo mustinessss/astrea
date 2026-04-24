@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оценка выступления — Астрея</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 18px 22px; border-radius: 10px; margin-bottom: 18px; }
+        .header h1 { margin: 0 0 6px 0; font-size: 22px; }
+        .header .meta { opacity: .9; font-size: 14px; }
+        .back-btn { background: #6c757d; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; display: inline-block; margin-bottom: 14px; }
+        .back-btn:hover { background: #5a6268; }
+        .panel { background: #fff; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        .criterion { padding: 14px 0; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 1fr 230px 70px; align-items: center; gap: 16px; }
+        .criterion:last-child { border-bottom: none; }
+        .criterion .name { font-weight: 600; color: #333; }
+        .criterion input[type=range] { width: 100%; }
+        .criterion .val { font-weight: 700; color: #667eea; text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
+        .criterion.scored .name::after { content: " ✓"; color: #28a745; }
+        .submit-row { margin-top: 22px; text-align: right; }
+        .btn { padding: 12px 26px; border: 0; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; }
+        .btn-primary { background: #28a745; color: #fff; }
+        .btn-primary:hover { background: #218838; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-secondary:hover { background: #5a6268; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal-backdrop.open { display: flex; }
+        .modal { background: #fff; padding: 22px; border-radius: 10px; max-width: 520px; width: 92%; max-height: 80vh; display: flex; flex-direction: column; }
+        .modal h2 { margin: 0 0 12px 0; font-size: 20px; }
+        .modal .summary { overflow-y: auto; border: 1px solid #eee; border-radius: 6px; }
+        .summary .row { padding: 8px 12px; display: flex; justify-content: space-between; border-bottom: 1px solid #f1f1f1; }
+        .summary .row:last-child { border-bottom: none; }
+        .summary .row .v { font-weight: 700; color: #667eea; }
+        .modal .actions { margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end; }
+        .toast { position: fixed; top: 20px; right: 20px; background: #28a745; color: #fff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: none; z-index: 200; }
+        .toast.error { background: #dc3545; }
+        .toast.show { display: block; }
+    </style>
+</head>
+<body>
+    <a href="/dashboard" class="back-btn">← К дашборду</a>
+
+    <div class="header">
+        <h1>{{ performance.performance_name }}</h1>
+        <div class="meta">Дисциплина: {{ performance.discipline }} · Судья: {{ judge.email }} ({{ judge.role }})</div>
+    </div>
+
+    <div class="panel">
+        <div id="criteria">
+            {% for c in criteria %}
+            <div class="criterion {% if existing_scores.get(c.id_criterion) is not none %}scored{% endif %}"
+                 data-id="{{ c.id_criterion }}"
+                 data-name="{{ c.name_criterion }}"
+                 data-min="0"
+                 data-max="{{ c.start_point }}"
+                 data-step="{{ c.step }}">
+                <div class="name">{{ c.name_criterion }}</div>
+                <input type="range"
+                       min="0"
+                       max="{{ c.start_point }}"
+                       step="{{ c.step }}"
+                       value="{{ existing_scores.get(c.id_criterion, 0) }}"
+                       oninput="this.parentNode.querySelector('.val').textContent = (+this.value).toFixed(2)">
+                <div class="val">{{ '%.2f'|format(existing_scores.get(c.id_criterion, 0)|float) }}</div>
+            </div>
+            {% else %}
+            <p style="color:#888">Нет критериев под роль «{{ judge.role }}» в этом событии.</p>
+            {% endfor %}
+        </div>
+
+        <div class="submit-row">
+            <button class="btn btn-primary" onclick="openConfirm()">Отправить</button>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="modal">
+        <div class="modal">
+            <h2>Подтверждение оценок</h2>
+            <div class="summary" id="summary"></div>
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="closeConfirm()">Изменить</button>
+                <button class="btn btn-primary" id="confirm-btn" onclick="submitScores()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    const PERFORMANCE_ID = {{ performance.id_performance }};
+
+    function collect() {
+        return Array.from(document.querySelectorAll('.criterion')).map(el => ({
+            criterion_id: parseInt(el.dataset.id),
+            name: el.dataset.name,
+            value: parseFloat(el.querySelector('input[type=range]').value),
+        }));
+    }
+
+    function openConfirm() {
+        const items = collect();
+        if (items.length === 0) return;
+        const summary = document.getElementById('summary');
+        summary.innerHTML = items.map(i =>
+            `<div class="row"><span>${i.name}</span><span class="v">${i.value.toFixed(2)}</span></div>`
+        ).join('');
+        document.getElementById('modal').classList.add('open');
+    }
+
+    function closeConfirm() {
+        document.getElementById('modal').classList.remove('open');
+    }
+
+    function showToast(msg, isError) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.toggle('error', !!isError);
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function submitScores() {
+        const btn = document.getElementById('confirm-btn');
+        btn.disabled = true;
+        const items = collect();
+        try {
+            const res = await fetch('/judge/score', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    performance_id: PERFORMANCE_ID,
+                    scores: items.map(i => ({criterion_id: i.criterion_id, value: i.value})),
+                }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || ('HTTP ' + res.status));
+            }
+            const data = await res.json();
+            closeConfirm();
+            showToast(`Сохранено: ${data.saved} оценок`);
+            document.querySelectorAll('.criterion').forEach(el => el.classList.add('scored'));
+            setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
+        } catch (e) {
+            showToast('Ошибка: ' + e.message, true);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+    </script>
+</body>
+</html>

@@ -1,147 +1,110 @@
 #!/usr/bin/env python3
-"""Populate criterion reference tables with all scoring criteria"""
+"""
+Наполняет таблицу `criterion` критериями для конкретного события.
+
+Использование:
+    python populate_criteria.py                # создать дефолтное событие и налить ФАФ туда
+    python populate_criteria.py --event 5      # налить в существующее событие id_event=5
+"""
+import argparse
+import datetime
+from typing import Iterable
 
 from app.db.database import SessionLocal
-from app.models.models import (
-    CriterionArtFaf, CriterionArtNaf,
-    CriterionTechFaf, CriterionTechNaf
-)
+from app.models.models import Criterion, Event
 
-def populate_criteria():
-    """Fill all criterion tables with predefined criteria"""
 
-    session = SessionLocal()
+# (judge_type, name, start_point, step)
+ART_FAF: list[tuple[str, str, float, float]] = [
+    ("artistry", "Музыкальность и ритм", 10.0, 0.5),
+    ("artistry", "Артистическое выражение", 10.0, 0.5),
+    ("artistry", "Работа с музыкой", 10.0, 0.5),
+    ("artistry", "Сценическое присутствие", 10.0, 0.5),
+    ("artistry", "Характер и эмоции", 10.0, 0.5),
+    ("artistry", "Визуальная эффектность", 10.0, 0.5),
+    ("artistry", "История/Повествование", 10.0, 0.5),
+    ("artistry", "Оригинальность идеи", 10.0, 0.5),
+    ("artistry", "Костюм и реквизит", 10.0, 0.5),
+    ("artistry", "Мизансценирование пространства", 10.0, 0.5),
+    ("artistry", "Переходы и связки", 10.0, 0.5),
+    ("artistry", "Техсредства (свет, звук)", 10.0, 0.5),
+    ("artistry", "Общее впечатление", 10.0, 0.5),
+]
 
+TECH_FAF: list[tuple[str, str, float, float]] = [
+    ("technical", "1.1 Синхронность техники", 10.0, 0.5),
+    ("technical", "1.2 Согласованность вооруженных и невооруженных действий", 10.0, 0.5),
+    ("technical", "1.3 Правильность техники", 10.0, 0.5),
+    ("technical", "1.4 Выравнивество движений", 10.0, 0.5),
+    ("technical", "1.5 Легкость выполнения", 10.0, 0.5),
+    ("technical", "2.1 Слаженность (группы) / Органичность (соло)", 10.0, 0.5),
+    ("technical", "2.2 Достоверность", 10.0, 0.5),
+    ("technical", "2.3 Качество исполнения", 10.0, 0.5),
+    ("technical", "3.1 Темп (отсутствие проседаний, заминок)", 10.0, 0.5),
+    ("technical", "3.2 Тактическая сложность", 10.0, 0.5),
+    ("technical", "3.3 Координационно-двигательная сложность", 10.0, 0.5),
+    ("technical", "3.4 Поощрение за сложность", 10.0, 0.5),
+    ("technical", "3.5 Разнообразие действий нападения", 10.0, 0.5),
+    ("technical", "3.6 Разнообразие действий обороны", 10.0, 0.5),
+    ("technical", "3.7 Разнообразие действий подготовки", 10.0, 0.5),
+    ("technical", "3.8 Общий уровень", 10.0, 0.5),
+]
+
+
+def _ensure_event(db) -> int:
+    event = db.query(Event).first()
+    if event is not None:
+        return event.id_event
+    event = Event(date=datetime.date.today(), city="Демо", name_event="Демо-фестиваль (ФАФ)")
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    print(f"✓ Создано дефолтное событие id_event={event.id_event}")
+    return event.id_event
+
+
+def _add_block(db, id_event: int, block: Iterable[tuple[str, str, float, float]], label: str) -> int:
+    n = 0
+    for judge_type, name, start_point, step in block:
+        db.add(Criterion(
+            name_criterion=name,
+            start_point=start_point,
+            step=step,
+            id_event=id_event,
+            judge_type=judge_type,
+        ))
+        n += 1
+    print(f"  + {label}: {n}")
+    return n
+
+
+def populate_criteria(id_event: int | None = None) -> bool:
+    db = SessionLocal()
     try:
-        # Artistry FAF criteria (13 criteria, 0-10)
-        art_faf_criteria = [
-            (1, "Музыкальность и ритм"),
-            (2, "Артистическое выражение"),
-            (3, "Работа с музыкой"),
-            (4, "Сценическое присутствие"),
-            (5, "Характер и эмоции"),
-            (6, "Визуальная эффектность"),
-            (7, "История/Повествование"),
-            (8, "Оригинальность идеи"),
-            (9, "Костюм и реквизит"),
-            (10, "Мизансценирование пространства"),
-            (11, "Переходы и связки"),
-            (12, "Техсредства (свет, звук)"),
-            (13, "Общее впечатление"),
-        ]
+        target_event = id_event if id_event is not None else _ensure_event(db)
 
-        for num, name in art_faf_criteria:
-            criterion = CriterionArtFaf(
-                criterion_number=num,
-                criterion_name=name,
-                min_value=0,
-                max_value=10
-            )
-            session.add(criterion)
-            print(f"✓ Added Art FAF criterion {num}: {name}")
+        existing = db.query(Criterion).filter(Criterion.id_event == target_event).count()
+        if existing:
+            print(f"⚠️  В событии id_event={target_event} уже есть {existing} критериев — пропускаю.")
+            return True
 
-        # Artistry NAF criteria (13 criteria, 0-1, except 9,12: 0-0.5)
-        art_naf_criteria = [
-            (1, "Музыкальность и ритм", 0.0, 1.0),
-            (2, "Артистическое выражение", 0.0, 1.0),
-            (3, "Работа с музыкой", 0.0, 1.0),
-            (4, "Сценическое присутствие", 0.0, 1.0),
-            (5, "Характер и эмоции", 0.0, 1.0),
-            (6, "Визуальная эффектность", 0.0, 1.0),
-            (7, "История/Повествование", 0.0, 1.0),
-            (8, "Оригинальность идеи", 0.0, 1.0),
-            (9, "Костюм и реквизит", 0.0, 0.5),  # Special range
-            (10, "Мизансценирование пространства", 0.0, 1.0),
-            (11, "Переходы и связки", 0.0, 1.0),
-            (12, "Техсредства (свет, звук)", 0.0, 0.5),  # Special range
-            (13, "Общее впечатление", 0.0, 1.0),
-        ]
-
-        for num, name, min_val, max_val in art_naf_criteria:
-            criterion = CriterionArtNaf(
-                criterion_number=num,
-                criterion_name=name,
-                min_value=min_val,
-                max_value=max_val
-            )
-            session.add(criterion)
-            print(f"✓ Added Art NAF criterion {num}: {name} ({min_val}-{max_val})")
-
-        # Technical FAF criteria (16 criteria, 0-10)
-        tech_faf_criteria = [
-            (1, "1.1 Синхронность техники"),
-            (2, "1.2 Согласованность вооруженных и невооруженных действий"),
-            (3, "1.3 Правильность техники"),
-            (4, "1.4 Выравнивество движений"),
-            (5, "1.5 Легкость выполнения"),
-            (6, "2.1 Слаженность (группы) / Органичность (соло)"),
-            (7, "2.2 Достоверность"),
-            (8, "2.3 Качество исполнения"),
-            (9, "3.1 Темп (отсутствие проседаний, заминок)"),
-            (10, "3.2 Тактическая сложность"),
-            (11, "3.3 Координационно-двигательная сложность"),
-            (12, "3.4 Поощрение за сложность"),
-            (13, "3.5 Разнообразие действий нападения"),
-            (14, "3.6 Разнообразие действий обороны"),
-            (15, "3.7 Разнообразие действий подготовки"),
-            (16, "3.8 Общий уровень"),
-        ]
-
-        for num, name in tech_faf_criteria:
-            criterion = CriterionTechFaf(
-                criterion_number=num,
-                criterion_name=name,
-                min_value=0,
-                max_value=10
-            )
-            session.add(criterion)
-            print(f"✓ Added Tech FAF criterion {num}: {name}")
-
-        # Technical NAF criteria (16 criteria, varying ranges)
-        tech_naf_criteria = [
-            (1, "1.1 Синхронность техники", 0.0, 1.0),
-            (2, "1.2 Согласованность вооруженных и невооруженных действий", 0.0, 1.0),
-            (3, "1.3 Правильность техники", 0.0, 1.0),
-            (4, "1.4 Выравнивество движений", 0.0, 1.0),
-            (5, "1.5 Легкость выполнения", 0.0, 1.0),
-            (6, "2.1 Слаженность (группы) / Органичность (соло)", 0.0, 2.0),  # 0-2
-            (7, "2.2 Достоверность", 0.0, 2.0),  # 0-2
-            (8, "2.3 Качество исполнения", 0.0, 1.0),
-            (9, "3.1 Темп (отсутствие проседаний, заминок)", 0.0, 1.0),
-            (10, "3.2 Тактическая сложность", 0.0, 1.0),
-            (11, "3.3 Координационно-двигательная сложность", 0.0, 1.0),
-            (12, "3.4 Поощрение за сложность", 0.0, 1.0),
-            (13, "3.5 Разнообразие действий нападения", 0.0, 1.0),
-            (14, "3.6 Разнообразие действий обороны", 0.0, 1.0),
-            (15, "3.7 Разнообразие действий подготовки", 0.0, 1.0),
-            (16, "3.8 Общий уровень", 0.0, 1.0),
-        ]
-
-        for num, name, min_val, max_val in tech_naf_criteria:
-            criterion = CriterionTechNaf(
-                criterion_number=num,
-                criterion_name=name,
-                min_value=min_val,
-                max_value=max_val
-            )
-            session.add(criterion)
-            print(f"✓ Added Tech NAF criterion {num}: {name} ({min_val}-{max_val})")
-
-        session.commit()
-        print(f"\n✅ Successfully populated all criterion tables:")
-        print(f"   • Art FAF: {len(art_faf_criteria)} criteria")
-        print(f"   • Art NAF: {len(art_naf_criteria)} criteria")
-        print(f"   • Tech FAF: {len(tech_faf_criteria)} criteria")
-        print(f"   • Tech NAF: {len(tech_naf_criteria)} criteria")
-
-    except Exception as e:
-        session.rollback()
-        print(f"❌ Error populating criteria: {e}")
+        print(f"Наполняю критерии для id_event={target_event}:")
+        total = 0
+        total += _add_block(db, target_event, TECH_FAF, "Технические (ФАФ)")
+        total += _add_block(db, target_event, ART_FAF, "Артистические (ФАФ)")
+        db.commit()
+        print(f"\n✅ Готово. Всего критериев: {total}")
+        return True
+    except Exception as exc:
+        db.rollback()
+        print(f"❌ Ошибка: {exc}")
         return False
     finally:
-        session.close()
+        db.close()
 
-    return True
 
 if __name__ == "__main__":
-    populate_criteria()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--event", type=int, default=None)
+    args = parser.parse_args()
+    populate_criteria(args.event)

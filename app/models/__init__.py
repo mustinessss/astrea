@@ -1,5 +1,6 @@
 from app.models.models import (
     Chronometric,
+    Criterion,
     Event,
     Human,
     HumanEvent,
@@ -7,15 +8,13 @@ from app.models.models import (
     HumanTeam,
     Judge,
     Performance,
-    ScoresArtFaf,
-    ScoresArtNaf,
-    ScoresTechFaf,
-    ScoresTechNaf,
+    Score,
     Team,
 )
 
 __all__ = [
     "Chronometric",
+    "Criterion",
     "Event",
     "Human",
     "HumanEvent",
@@ -23,9 +22,6 @@ __all__ = [
     "HumanTeam",
     "Judge",
     "Performance",
-    "ScoresArtFaf",
-    "ScoresArtNaf",
-    "ScoresTechFaf",
-    "ScoresTechNaf",
+    "Score",
     "Team",
 ]
