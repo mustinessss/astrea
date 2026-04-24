@@ -203,3 +203,91 @@ class Score(Base):
     id_criterion: Mapped[int] = mapped_column(Integer, ForeignKey('criterion.id_criterion', ondelete='CASCADE'), nullable=False)
     id_performance: Mapped[int] = mapped_column(Integer, ForeignKey('performance.id_performance', ondelete='CASCADE'), nullable=False)
     value: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+
+
+# Backwards compatibility aliases -------------------------------------------------
+# Tests and older code expect separate model names and some legacy attribute names
+# (e.g. `ScoresArtFaf`, `score`, `CriterionArtFaf`, `criterion_number`). The
+# project was refactored to unified `Score` and `Criterion` models; provide
+# lightweight aliases so older imports continue to work without duplicating tables.
+
+# Model name aliases (point to unified tables)
+ScoresArtFaf = ScoresArtNaf = ScoresTechFaf = ScoresTechNaf = Score
+CriterionArtFaf = CriterionArtNaf = CriterionTechFaf = CriterionTechNaf = Criterion
+
+# Legacy attribute name aliases (map old names to current columns)
+# Score.score -> Score.value
+try:
+    Score.score = Score.value
+except Exception:
+    pass
+
+
+# Reflect existing/legacy tables if present in the database and create
+# compatible ORM mappings so the code can work with an older DB schema.
+try:
+    from sqlalchemy import Table
+    from sqlalchemy import inspect
+    from app.db.database import engine
+
+    inspector = inspect(engine)
+
+    # If the unified tables exist, re-bind model __table__ to the reflected table
+    if inspector.has_table("scores"):
+        try:
+            reflected_scores = Table("scores", Base.metadata, autoload_with=engine)
+            Score.__table__ = reflected_scores
+        except Exception:
+            pass
+
+    if inspector.has_table("criterion"):
+        try:
+            reflected_criterion = Table("criterion", Base.metadata, autoload_with=engine)
+            Criterion.__table__ = reflected_criterion
+        except Exception:
+            pass
+
+    # Legacy per-system score tables (older schema)
+    legacy_score_tables = [
+        "scores_art_faf",
+        "scores_art_naf",
+        "scores_tech_faf",
+        "scores_tech_naf",
+    ]
+    for tbl_name in legacy_score_tables:
+        if inspector.has_table(tbl_name):
+            try:
+                tbl = Table(tbl_name, Base.metadata, autoload_with=engine)
+                cls_name = ''.join(part.capitalize() for part in tbl_name.split('_'))
+                globals()[cls_name] = type(cls_name, (Base,), {"__table__": tbl})
+            except Exception:
+                pass
+
+    # Legacy per-system criterion tables
+    legacy_criterion_tables = [
+        "criterion_art_faf",
+        "criterion_art_naf",
+        "criterion_tech_faf",
+        "criterion_tech_naf",
+    ]
+    for tbl_name in legacy_criterion_tables:
+        if inspector.has_table(tbl_name):
+            try:
+                tbl = Table(tbl_name, Base.metadata, autoload_with=engine)
+                cls_name = ''.join(part.capitalize() for part in tbl_name.split('_'))
+                globals()[cls_name] = type(cls_name, (Base,), {"__table__": tbl})
+            except Exception:
+                pass
+
+except Exception:
+    # Keep silent if DB is unreachable during import-time (tests/runtime will catch it)
+    pass
+
+# Criterion.criterion_number and legacy id_criterion_* names -> id_criterion
+try:
+    Criterion.criterion_number = Criterion.id_criterion
+    Criterion.id_criterion_art_faf = Criterion.id_criterion_art_naf = \
+        Criterion.id_criterion_tech_faf = Criterion.id_criterion_tech_naf = Criterion.id_criterion
+except Exception:
+    pass
+

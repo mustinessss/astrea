@@ -1,0 +1,7 @@
+﻿PYTHONHOME: 
+C:\Users\ashst\AppData\Local\Programs\Python\Python314\python.exe
+-c
+import sys; print(sys.executable); print('\\n'.join(sys.path))
+C:\Users\ashst\AppData\Local\Programs\Python\Python314\python.exe
+-c
+pass
