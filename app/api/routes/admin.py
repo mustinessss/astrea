@@ -1,12 +1,12 @@
-"""Админ-роутер: управление судьями (только main_judge/admin)."""
+"""Админ-роутер: управление судьями (только main_judge/admin). Cookie-auth."""
 import secrets
 import string
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_main_judge, get_password_hash
+from app.core.auth import get_password_hash
 from app.db.database import get_db
 from app.models.models import Event, Human, Judge
 from app.schemas.human import HumanResponse
@@ -17,6 +17,21 @@ from app.schemas.judge_admin import (
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def require_main_judge_cookie(request: Request, db: Session = Depends(get_db)) -> Judge:
+    """Cookie-проверка: пускает только main_judge/admin."""
+    judge_id = request.cookies.get("judge_id")
+    if not judge_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        jid = int(judge_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Bad cookie")
+    judge = db.query(Judge).filter(Judge.id_judge == jid).first()
+    if not judge or judge.role not in ("main_judge", "admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return judge
 
 
 def _generate_password(length: int = 12) -> str:
@@ -46,7 +61,7 @@ def _to_response(
 @router.get("/humans", response_model=List[HumanResponse])
 def list_humans(
     db: Session = Depends(get_db),
-    _: dict = Depends(get_main_judge),
+    _: Judge = Depends(require_main_judge_cookie),
 ):
     return db.query(Human).order_by(Human.last_name, Human.first_name).all()
 
@@ -54,7 +69,7 @@ def list_humans(
 @router.get("/judges", response_model=List[JudgeAdminResponse])
 def list_judges(
     db: Session = Depends(get_db),
-    _: dict = Depends(get_main_judge),
+    _: Judge = Depends(require_main_judge_cookie),
 ):
     return [_to_response(db, j) for j in db.query(Judge).order_by(Judge.id_judge).all()]
 
@@ -63,7 +78,7 @@ def list_judges(
 def create_judge(
     data: JudgeAdminCreate,
     db: Session = Depends(get_db),
-    _: dict = Depends(get_main_judge),
+    _: Judge = Depends(require_main_judge_cookie),
 ):
     human = db.query(Human).filter(Human.id == data.id_human).first()
     if not human:
@@ -75,7 +90,7 @@ def create_judge(
             raise HTTPException(status_code=404, detail="Event not found")
 
     if db.query(Judge).filter(Judge.email == data.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email уже занят")
 
     password_plain = data.password or _generate_password()
     new_judge = Judge(
@@ -103,7 +118,7 @@ def reset_password(
     judge_id: int,
     data: JudgePasswordReset,
     db: Session = Depends(get_db),
-    _: dict = Depends(get_main_judge),
+    _: Judge = Depends(require_main_judge_cookie),
 ):
     judge = db.query(Judge).filter(Judge.id_judge == judge_id).first()
     if not judge:
@@ -123,7 +138,7 @@ def reset_password(
 def toggle_active(
     judge_id: int,
     db: Session = Depends(get_db),
-    _: dict = Depends(get_main_judge),
+    _: Judge = Depends(require_main_judge_cookie),
 ):
     judge = db.query(Judge).filter(Judge.id_judge == judge_id).first()
     if not judge:

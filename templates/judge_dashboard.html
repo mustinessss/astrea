@@ -45,7 +45,11 @@
             Оценено выступлений: <strong>{{ scored_count }}</strong> / {{ total_count }}
         </div>
         <div class="top-actions">
-            <a href="/admin" class="btn btn-admin">Итоги события</a>
+            {% if role_type in ["main_judge", "admin"] %}
+                <a href="/admin" class="btn btn-admin">Итоги события</a>
+                <a href="/admin/judges" class="btn btn-admin">Управление судьями</a>
+                <a href="/admin/events" class="btn btn-admin">Мероприятия</a>
+            {% endif %}
             <a href="/" class="btn btn-secondary">Выйти</a>
         </div>
     </div>

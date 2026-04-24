@@ -182,7 +182,7 @@
         if (pwd) payload.password = pwd;
 
         try {
-            const res = await fetch('/admin/judges', {
+            const res = await fetch('/api/admin/judges', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload),
@@ -211,7 +211,7 @@
     async function resetPassword(id) {
         if (!confirm('Сгенерировать новый пароль для этого судьи?')) return;
         try {
-            const res = await fetch('/admin/judges/' + id + '/reset-password', {
+            const res = await fetch('/api/admin/judges/' + id + '/reset-password', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({}),
@@ -227,7 +227,7 @@
 
     async function toggleActive(id) {
         try {
-            const res = await fetch('/admin/judges/' + id + '/toggle-active', {method: 'POST'});
+            const res = await fetch('/api/admin/judges/' + id + '/toggle-active', {method: 'POST'});
             if (!res.ok) throw new Error('HTTP ' + res.status);
             window.location.reload();
         } catch (e) {

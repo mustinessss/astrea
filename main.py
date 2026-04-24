@@ -49,7 +49,7 @@ app.include_router(human_router)
 app.include_router(event_router)
 app.include_router(score_router)
 app.include_router(team_router)
-app.include_router(admin_router)
+app.include_router(admin_router, prefix="/api", tags=["admin-api"])
 
 # ───────────────────────── Web pages ─────────────────────────
 
