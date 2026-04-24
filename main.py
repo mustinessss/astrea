@@ -18,7 +18,7 @@ from app.api.services.score_service import upsert_score
 from app.core.auth import create_token_pair, verify_password
 from app.core.config import settings
 from app.db.database import Base, SessionLocal, engine
-from app.models.models import Criterion, Event, Judge, Performance, Score
+from app.models.models import Criterion, Event, Judge, Performance, Score, Human
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates")
@@ -116,6 +116,18 @@ async def dashboard_page(request: Request):
         if not judge:
             return RedirectResponse(url="/", status_code=302)
 
+        # Главный судья / админ: если событие отвалилось — подцепить самое свежее
+        if judge.role in ("main_judge", "admin"):
+            current_event = None
+            if judge.id_event is not None:
+                current_event = db.query(Event).filter(Event.id_event == judge.id_event).first()
+            if current_event is None:
+                current_event = db.query(Event).order_by(Event.id_event.desc()).first()
+                if current_event is not None:
+                    judge.id_event = current_event.id_event
+                    db.add(judge)
+                    db.commit()
+                    db.refresh(judge)
         disciplines: dict[str, list[dict]] = {}
         scored_count = 0
         total_count = 0
@@ -178,22 +190,31 @@ def _require_main_judge(request: Request) -> Optional[Judge]:
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
-    """Сводка по событию — только для главного судьи."""
+    """Сводка по событию — только для главного судьи. Авто-переподвязка к свежему событию."""
     judge = _require_main_judge(request)
     if judge is None:
         return RedirectResponse(url="/dashboard", status_code=302)
-    if judge.id_event is None:
-        return RedirectResponse(url="/admin/judges", status_code=302)
 
     db = SessionLocal()
     try:
-        event = db.query(Event).filter(Event.id_event == judge.id_event).first()
-        rows = calculate_event_results_parallel(judge.id_event)
+        event = None
+        if judge.id_event is not None:
+            event = db.query(Event).filter(Event.id_event == judge.id_event).first()
+        if event is None:
+            event = db.query(Event).order_by(Event.id_event.desc()).first()
+            if event is None:
+                return RedirectResponse(url="/admin/judges", status_code=302)
+            judge.id_event = event.id_event
+            db.add(judge)
+            db.commit()
+            db.refresh(judge)
+
+        rows = calculate_event_results_parallel(event.id_event)
         judges_count = db.query(func.count(Judge.id_judge)).filter(
-            Judge.id_event == judge.id_event
+            Judge.id_event == event.id_event
         ).scalar() or 0
         scores_count = db.query(func.count(Score.id_scores)).filter(
-            Score.id_event == judge.id_event
+            Score.id_event == event.id_event
         ).scalar() or 0
     finally:
         db.close()
@@ -243,7 +264,92 @@ async def admin_judges_page(request: Request):
         "current_event_id": judge.id_event,
     })
 
+@app.get("/admin/events", response_class=HTMLResponse)
+async def admin_events_page(request: Request):
+    """Список и создание мероприятий, переключение активного события."""
+    judge = _require_main_judge(request)
+    if judge is None:
+        return RedirectResponse(url="/dashboard", status_code=302)
 
+    db = SessionLocal()
+    try:
+        evts = db.query(Event).order_by(Event.id_event.desc()).all()
+        events_view = []
+        for e in evts:
+            perf_count = db.query(func.count(Performance.id_performance)).filter(
+                Performance.id_event == e.id_event
+            ).scalar() or 0
+            j_count = db.query(func.count(Judge.id_judge)).filter(
+                Judge.id_event == e.id_event
+            ).scalar() or 0
+            events_view.append({
+                "id_event": e.id_event,
+                "name_event": e.name_event,
+                "city": e.city,
+                "date": e.date,
+                "perf_count": perf_count,
+                "judges_count": j_count,
+            })
+    finally:
+        db.close()
+
+    return templates.TemplateResponse("admin_events.html", {
+        "request": request,
+        "events": events_view,
+        "current_event_id": judge.id_event,
+    })
+
+
+@app.post("/admin/events")
+async def admin_create_event(request: Request, payload: dict = Body(...)):
+    judge = _require_main_judge(request)
+    if judge is None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    name_event = (payload.get("name_event") or "").strip()
+    city = (payload.get("city") or "").strip()
+    date_str = payload.get("date")
+    if not name_event or not city:
+        raise HTTPException(status_code=400, detail="name_event и city обязательны")
+
+    from datetime import date as _date
+    parsed_date = None
+    if date_str:
+        try:
+            parsed_date = _date.fromisoformat(date_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Неверный формат даты, нужен YYYY-MM-DD")
+
+    db = SessionLocal()
+    try:
+        new_event = Event(name_event=name_event, city=city, date=parsed_date)
+        db.add(new_event)
+        db.commit()
+        db.refresh(new_event)
+        return {"id_event": new_event.id_event, "name_event": new_event.name_event}
+    finally:
+        db.close()
+
+
+@app.post("/admin/events/{event_id}/set-active")
+async def admin_set_active_event(request: Request, event_id: int):
+    """Переключить активное событие для текущего главного судьи."""
+    judge = _require_main_judge(request)
+    if judge is None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    db = SessionLocal()
+    try:
+        event = db.query(Event).filter(Event.id_event == event_id).first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        j = db.query(Judge).filter(Judge.id_judge == judge.id_judge).first()
+        j.id_event = event.id_event
+        db.add(j)
+        db.commit()
+        return {"ok": True, "id_event": event.id_event}
+    finally:
+        db.close()
 # ───────────────────────── Judging form (UI) ─────────────────────────
 
 

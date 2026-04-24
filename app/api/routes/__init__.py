@@ -11,4 +11,5 @@ __all__ = [
     "human_router",
     "score_router",
     "team_router",
+    "admin_router",
 ]

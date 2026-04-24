@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мероприятия — Астрея</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 18px 22px; border-radius: 10px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .nav-actions { display: flex; gap: 8px; }
+        .btn { padding: 8px 14px; border: 0; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; font-size: 14px; }
+        .btn-light { background: #fff; color: #764ba2; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-primary { background: #28a745; color: #fff; }
+        .btn-warn { background: #ffc107; color: #6b5400; }
+        .btn:hover { opacity: .92; }
+        .grid { display: grid; grid-template-columns: 380px 1fr; gap: 18px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .panel { background: #fff; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        .panel h2 { margin-top: 0; font-size: 18px; color: #333; }
+        .field { margin-bottom: 12px; }
+        .field label { display: block; margin-bottom: 6px; font-weight: 600; color: #495057; font-size: 14px; }
+        .field input { width: 100%; padding: 9px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        .field input:focus { outline: none; border-color: #667eea; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #f1f3f7; font-size: 12px; text-transform: uppercase; color: #555; letter-spacing: .03em; }
+        tr:last-child td { border-bottom: none; }
+        .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; background: #e9ecef; color: #333; }
+        .pill.active { background: #d4edda; color: #155724; }
+        .toast { position: fixed; right: 18px; bottom: 18px; background: #333; color: #fff; padding: 10px 14px; border-radius: 8px; opacity: 0; transition: opacity .3s; }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Мероприятия</h1>
+        <div class="nav-actions">
+            <a href="/admin" class="btn btn-light">Итоги события</a>
+            <a href="/admin/judges" class="btn btn-light">Управление судьями</a>
+            <a href="/dashboard" class="btn btn-secondary">К дашборду</a>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h2>Создать мероприятие</h2>
+            <form id="create-form">
+                <div class="field">
+                    <label>Название</label>
+                    <input name="name_event" required>
+                </div>
+                <div class="field">
+                    <label>Город</label>
+                    <input name="city" required>
+                </div>
+                <div class="field">
+                    <label>Дата</label>
+                    <input type="date" name="date">
+                </div>
+                <button class="btn btn-primary" type="submit">Создать</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h2>Список мероприятий</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Название</th><th>Город</th><th>Дата</th>
+                        <th>Выступлений</th><th>Судей</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for e in events %}
+                    <tr>
+                        <td>{{ e.id_event }}</td>
+                        <td>{{ e.name_event }}</td>
+                        <td>{{ e.city }}</td>
+                        <td>{{ e.date or "—" }}</td>
+                        <td>{{ e.perf_count }}</td>
+                        <td>{{ e.judges_count }}</td>
+                        <td>
+                            {% if e.id_event == current_event_id %}
+                                <span class="pill active">активно</span>
+                            {% else %}
+                                <button class="btn btn-warn" onclick="setActive({{ e.id_event }})">Сделать активным</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" style="text-align:center;color:#888;padding:24px">Мероприятий ещё нет.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        document.getElementById('create-form').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const fd = new FormData(ev.target);
+            const body = Object.fromEntries(fd.entries());
+            if (!body.date) delete body.date;
+            const res = await fetch('/admin/events', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                showToast('Ошибка: ' + (err.detail || res.status));
+                return;
+            }
+            showToast('Мероприятие создано');
+            setTimeout(() => location.reload(), 600);
+        });
+
+        async function setActive(id) {
+            const res = await fetch('/admin/events/' + id + '/set-active', {method: 'POST'});
+            if (!res.ok) { showToast('Ошибка'); return; }
+            showToast('Активное мероприятие переключено');
+            setTimeout(() => location.reload(), 600);
+        }
+    </script>
+</body>
+</html>
