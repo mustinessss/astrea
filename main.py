@@ -409,6 +409,30 @@ class _ScoreBatch(BaseModel):
     performance_id: int
     scores: List[_ScoreItem]
 
+@app.get("/viewer", response_class=HTMLResponse)
+async def viewer_dashboard(request: Request):
+    db = SessionLocal()
+    try:
+        event = db.query(Event).order_by(Event.id_event.desc()).first()
+        disciplines: dict = {}
+        if event:
+            perfs = db.query(Performance).filter(
+                Performance.id_event == event.id_event
+            ).all()
+            for p in perfs:
+                disciplines.setdefault(p.discipline, []).append({
+                    "id": p.id_performance,
+                    "name": p.performance_name,
+                    "scored": False,
+                })
+    finally:
+        db.close()
+
+    return templates.TemplateResponse("viewer_dashboard.html", {
+        "request": request,
+        "disciplines": disciplines,
+        "total_count": len([p for d in disciplines.values() for p in d]),
+    })
 
 @app.post("/judge/score")
 async def judge_submit_scores(request: Request, payload: _ScoreBatch = Body(...)):
