@@ -46,7 +46,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(_static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 app.include_router(auth_router)
 app.include_router(human_router)
