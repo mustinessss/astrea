@@ -56,6 +56,8 @@ cp .env.example .env
 .venv/bin/python create_test_judge.py      # тех-судья, пароль testpass
 .venv/bin/python seed_test_data.py         # арт-судья (artpass) + 3 выступления
 
+
+.venv\Scripts\activate
 .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
