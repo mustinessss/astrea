@@ -25,16 +25,9 @@ logging.basicConfig(level=logging.INFO)
 
 templates = Jinja2Templates(directory="templates")
 
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("✅ Таблицы БД созданы / уже существуют")
-except Exception as e:
-    logger.error(f"❌ Ошибка создания таблиц: {e}")
-    raise
-
 app = FastAPI(
     title="Астрея — Система судейства фехтования",
-    description="Автоматизированная система судейства на фестивалях артистического фехтования",
+    description="Автоматизированная система судейства для соревнований артистического фехтования",
     version="0.3.0",
 )
 
@@ -119,7 +112,7 @@ async def logout():
     return response
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
+"""@app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page(request: Request):
     judge_id = request.cookies.get("judge_id")
     if not judge_id:
@@ -194,7 +187,7 @@ async def dashboard_page(request: Request):
         "scored_count": scored_count,
         "total_count": total_count,
     }
-    return templates.TemplateResponse("judge_dashboard.html", context)
+    return templates.TemplateResponse("judge_dashboard.html", context)"""
 
 
 def _require_main_judge(request: Request) -> Optional[Judge]:
